@@ -1,0 +1,99 @@
+from fastapi import HTTPException, Security,Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import jwt,JWTError
+from config.db_config import user_collection
+import os
+from fastapi.responses import JSONResponse
+from .response_mixin import CustomResponseMixin
+response = CustomResponseMixin()
+
+SECRET_ACCESS_KEY = os.getenv("SECRET_ACCESS_KEY", " ")
+ALGORITHM = "HS256"
+
+#class for AdminPermission       
+class AdminPermission:
+    def __init__(self, allowed_roles):
+        self.allowed_roles = allowed_roles
+        self.http_bearer = HTTPBearer()
+
+    async def __call__(self, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
+        
+        if credentials is None:        
+            return response.raise_exception(
+                    message="No token provided. Authentication required.",
+                    data={},
+                    status_code=403
+                )
+
+        try:
+            # Decode the JWT token
+            payload = jwt.decode(credentials.credentials, SECRET_ACCESS_KEY, algorithms=[ALGORITHM])
+            user = await user_collection.find_one({"email": payload["sub"]})
+
+            if not user:
+                raise HTTPException(status_code=401, detail="Invalid user")
+
+            # Debugging: Log the user role
+            user_role = user.get("role")
+
+            # Check if the user has the required role
+            if user_role not in self.allowed_roles:
+                return response.raise_exception(
+                    message="You dont have enough permissions to perform this action",
+                    data={},
+                    status_code=403
+                )
+
+            return user
+
+        except JWTError:
+            return response.raise_exception(
+                    message="Acces Token Expired,please login",
+                    data={},
+                    status_code=401
+                )
+
+
+#class for UserPermission    
+class UserPermission:
+    def __init__(self, allowed_roles):
+        self.allowed_roles = allowed_roles
+        self.http_bearer = HTTPBearer()
+
+    async def __call__(self, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
+        
+        if credentials is None:        
+            return response.raise_exception(
+                    message="No token provided. Authentication required.",
+                    data={},
+                    status_code=403
+                )
+
+        try:
+            # Decode the JWT token
+            payload = jwt.decode(credentials.credentials, SECRET_ACCESS_KEY, algorithms=[ALGORITHM])
+            user = await user_collection.find_one({"email": payload["sub"]})
+
+            if not user:
+                raise HTTPException(status_code=401, detail="Invalid user")
+
+            # Debugging: Log the user role
+            user_role = user.get("role")
+
+            # Check if the user has the required role
+            if user_role not in self.allowed_roles:
+                return response.raise_exception(
+                    message="You dont have enough permissions to perform this action",
+                    data={},
+                    status_code=403
+                )
+
+            return user
+
+        except JWTError:
+            return response.raise_exception(
+                    message="Acces Token Expired,please login",
+                    data={},
+                    status_code=403
+                )
+ 

@@ -1,0 +1,167 @@
+
+{ 
+  "-------------1-------------":"-------------1-------------",  
+  "user_profile": "Profile.py",
+
+  "_comment1.1": "This is user side api",
+  "api- {{base_url}}api/users/login?lang=en": "user_login.",
+  "login.invalid_credentials": "Invalid creddddentials.",
+  "login.role_mismatch": "This account is registered as: {role}. Please log in using the {role} profile.",
+  "LOGIN_SUCCESS": "Login successful.",
+  "FAILED_LOGIN": "Failed to login.",
+  "INVALID_CREDENTIALS": "Invalid credentials.",
+  "ACCOUNT_DELETED": "Your account has been deleted by the admin.",
+  "ACCOUNT_DEACTIVATED": "Your account has been deactivated by the admin.",
+
+  "_comment1.2": "This is admin side api",
+  "api- {{base_url}}api/users/admin/login": "admin_login.",
+  "INVALID_ADMIN_CREDENTIALS": "Invalid credentials for this login.",
+
+  "_comment1.3": "This is admin and user side api",
+  "api- {{base_url}}api/users/register": "register",
+  "Email '{email}' is already registered. Please use a different email address.": "Email '{email}' is already registered. Please use a different email address.",
+  "Password and re-enter password do not match": "Password and re-enter password do not match",
+  "Invalid role. Must be one of: {roles}": "Invalid role. Must be one of: {roles}",
+  "Country code is required for creating a Stripe account.": "Country code is required for creating a Stripe account.",
+  "Required termsid": "Required termsid",
+  "Invalid Terms & Conditions ID or inactive T&C.": "Invalid Terms & Conditions ID or inactive T&C.",
+  "Invalid Terms & Conditions ID format.": "Invalid Terms & Conditions ID format.",
+  "Stripe account creation failed: {error}": "Stripe account creation failed: {error}",
+  "User Created Successfully": "User Created Successfully",
+  "Error while creating user": "Error while creating user",
+
+  "_comment1.4": "This is admin and user side logout api",
+  "api- {{base_url}}api/users/logout?lang=fr": "logout",
+  "Invalid refresh token.": "Invalid refresh token.",
+  "Refresh token not found.": "Refresh token not found.",
+  "This token is already blacklisted.": "This token is already blacklisted.",
+  "User ID not found.": "User ID not found.",
+  "FCM device token not found.": "FCM device token not found.",
+  "Logout successful.": "Logout successful.",
+
+  "_comment1.5": "This is admin and user side refresh-token api",
+  "{{base_url}}api/users/refresh-token?lang=fr": "logout",
+  "The refresh token is blacklisted.": "The refresh token is blacklisted.",
+  "Successful": "Successful",
+
+  "_comment1.6": "This is admin and user side reset password api",
+  "{{base_url}}api/users/reset-password?lang=fr": "reset-password",
+  "User not found": "User not found",
+  "Current password is incorrect": "Current password is incorrect",
+  "New password and confirm password do not match": "New password and confirm password do not match",
+  "New password cannot be the same as the current password": "New password cannot be the same as the current password",
+  "Password reset successful": "Password reset successful",
+
+  "_comment1.7": "This is request password reset API",
+  "{{base_url}}api/users/request-password-reset?lang=en": "request-password-reset",
+  "Email is required": "Email is required",
+  "Failed to process password reset request. Please try again.": "Failed to process password reset request. Please try again.",
+  "Password Reset Request": "Password Reset Request",
+  "Your password reset code is: {reset_code}. It will expire in 15 minutes.": "Your password reset code is: {reset_code}. It will expire in 15 minutes.",
+  "Password reset code sent to email": "Password reset code sent to email",
+
+  "_comment1.8": "Verify forgot password OTP API",
+  "{{base_url}}api/users/forgot_pwd_otp_ver?lang=en": "forgot_pwd_otp_ver",
+  "Email or OTP cannot be empty": "Email or OTP cannot be empty",
+  "Invalid or expired reset code": "Invalid or expired reset code",
+  "Invalid verification code": "Invalid verification code",
+  "OTP verified successfully": "OTP verified successfully",
+
+  "_comment1.9": "Change password API",
+  "{{base_url}}api/users/forgot-password?lang=en": "forgot_password",
+  "Invalid or expired reset token": "Invalid or expired reset token",
+  "Signup Verification Successful": "Signup Verification Successful",
+
+  "_comment1.11": "Change password API",
+  "{{base_url}}api/users/change-password?lang=en": "change-password",
+
+  "_comment1.12": "User Profile Details API",
+  "{{base_url}}api/users/user-profile-details?lang=en": "user-profile-details",
+
+  "User Not Found": "User Not Found",
+  "User profile details retrieved successfully": "User profile details retrieved successfully",
+  "Error fetching user profile details": "Error fetching user profile details",
+
+  "_comment1.13": "Update User Profile API",
+  "{{base_url}}api/users/update-profile?lang=en": "update-profile",
+  "Username must be 3-20 characters long and can only contain letters, numbers, underscores, periods, and dashes.": "Username must be 3-20 characters long and can only contain letters, numbers, underscores, periods, and dashes.",
+  "Username already exists. Please choose a different one.": "Username already exists. Please choose a different one.",
+  "No changes were made to the profile.": "No changes were made to the profile.",
+  "User Profile Updated successfully.": "User Profile Updated successfully.",
+  "No fields were provided for update.": "No fields were provided for update.",
+  "Error updating user profile": "Error updating user profile",
+
+  "_comment1.14": "Generate presigned URL API",
+  "{{base_url}}api/users/get-presigned-url?lang=en": "get-presigned-url",
+  "Presigned Url generated successfully": "Presigned Url generated successfully",
+  "Failed to generate presigned URL": "Failed to generate presigned URL",
+
+  "_comment1.15": "Registration Presigned URL API",
+  "{{base_url}}api/users/registeration-get-presigned-url?lang=en": "registeration-get-presigned-url",
+
+  "_comment1.18": "Deactivate User API",
+  "{{base_url}}api/users/deactivate-user/{user_id}?lang=en": "deactivate-user",
+  "Invalid user ID format": "Invalid user ID format",
+  "You cannot deactivate your own account": "You cannot deactivate your own account",
+  "User account is already deactivated": "User account is already deactivated",
+  "User account deactivated successfully": "User account deactivated successfully",
+  "Failed to deactivate user account": "Failed to deactivate user account",
+  "Error deactivating user": "Error deactivating user",
+
+  "_comment1.19": "Delete User API",
+  "{{base_url}}api/users/delete-user/{user_id}?lang=en": "delete-user",
+  "You cannot delete your own account": "You cannot delete your own account",
+  "Admin accounts cannot be deleted": "Admin accounts cannot be deleted",
+  "User account is already deleted": "User account is already deleted",
+  "User account deleted successfully": "User account deleted successfully",
+  "Failed to delete user account": "Failed to delete user account",
+  "Error deleting user": "Error deleting user",
+
+  "_comment_language": "Language update messages",
+  "Unsupported language. Supported: en, fr": "Unsupported language. Supported: en, fr",
+  "Language already set": "Language is already set to the selected option",
+  "Language updated successfully": "Language updated successfully",
+  "Failed to update language: {error}": "Failed to update language: {error}",
+
+
+
+  "-------------2-------------":"-------------2-------------",  
+  "files_uploding": "files_api.py",
+
+  "NO_PROFILE_PHOTO_FOUND": "No profile photo found.",
+  "FILE_RECORD_NOT_FOUND": "File record not found.",
+  "S3_DELETION_ERROR": "S3 deletion error",
+  "LOCAL_FILE_DELETION_ERROR": "Local file deletion error",
+  "PROFILE_PHOTO_DELETED_SUCCESS": "Profile photo deleted successfully.",
+  "UNEXPECTED_ERROR": "Unexpected error",
+
+  "PROFILE_PHOTO_FETCH_SUCCESS": "Profile photo fetched successfully.",
+  "FAILED_TO_FETCH_PROFILE_PHOTO": "Failed to fetch profile photo",
+
+
+  "PROFILE_PHOTO_ALREADY_EXISTS": "Profile photo already exists. Use overwrite=true to replace.",
+  "PROFILE_PHOTO_UPLOAD_SUCCESS": "Profile photo uploaded successfully.",
+  "PROFILE_PHOTO_UPLOAD_FAILED": "Failed to upload profile photo",
+
+  
+  "UPLOADING_PROFILE_NOT_ALLOWED_TRY_OTHER_API": "Uploading profile photo via this API is not allowed. Please use the profile photo API.",
+  "FILE_UPLOADED_SUCCESS": "{file_type} uploaded successfully.",
+  "FILE_UPLOAD_FAILED": "Failed to upload file",
+
+  
+  "FILES_FETCHED_SUCCESS": "Files fetched successfully.",
+  "FILES_FETCH_FAILED": "Failed to fetch files",
+
+  
+  "FILE_NOT_FOUND_OR_DELETED": "File not found or already deleted.",
+  "UNAUTHORIZED_DELETE_FILE": "You are not authorized to delete this file.",
+  "LOCAL_DELETION_ERROR": "Local file deletion error",
+  "FILE_DELETED_SUCCESS": "File deleted successfully.",
+  "FILE_DELETE_FAILED": "Failed to delete file"
+
+
+
+
+
+
+}

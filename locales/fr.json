@@ -1,0 +1,167 @@
+{
+
+  "-------------1-------------":"-------------1-------------",
+  "user_profile": "Profile",
+
+  "_comment1.1": "This is user side login api",
+  "api- {{base_url}}api/users/login?lang=en": "user_login.",
+  "login.invalid_credentials": "Identifiants invalides",
+  "login.role_mismatch": "Ce compte est enregistré en tant que : {role}. Veuillez vous connecter avec le profil {role}.",
+  "LOGIN_SUCCESS": "Connexion réussie.",
+  "FAILED_LOGIN": "Échec de la connexion.",
+  "INVALID_CREDENTIALS": "Identifiants invalides",
+  "ACCOUNT_DELETED": "Votre compte a été supprimé par l'administrateur.",
+  "ACCOUNT_DEACTIVATED": "Votre compte a été désactivé par l'administrateur.",
+
+  "_comment1.2": "This is admin side login apis",
+  "api- {{base_url}}api/users/admin/login": "admin_login.",
+  "INVALID_ADMIN_CREDENTIALS": "Identifiants invalides pour cette connexion.",
+
+  "_comment1.3": "This is admin and user side signin apis",
+  "api- {{base_url}}api/users/register": "register",
+  "Email '{email}' is already registered. Please use a different email address.": "L'email '{email}' est déjà enregistré. Veuillez utiliser une autre adresse e-mail.",
+  "Password and re-enter password do not match": "Le mot de passe et la confirmation ne correspondent pas",
+  "Invalid role. Must be one of: {roles}": "Rôle invalide. Doit être l'un de: {roles}",
+  "Country code is required for creating a Stripe account.": "Le code pays est requis pour créer un compte Stripe.",
+  "Required termsid": "Identifiant des conditions requis",
+  "Invalid Terms & Conditions ID or inactive T&C.": "Identifiant des conditions générales invalide ou inactif.",
+  "Invalid Terms & Conditions ID format.": "Format d'identifiant des conditions générales invalide.",
+  "Stripe account creation failed: {error}": "La création du compte Stripe a échoué: {error}",
+  "User Created Successfully": "Utilisateur créé avec succès",
+  "Error while creating user": "Erreur lors de la création de l'utilisateur",
+
+  "_comment1.4": "This is admin and user side logout api",
+  "api- {{base_url}}api/users/logout?lang=fr": "logout",
+  "Invalid refresh token.": "Jeton d'actualisation invalide.",
+  "Refresh token not found.": "Jeton d'actualisation introuvable.",
+  "This token is already blacklisted.": "Ce jeton est déjà mis sur liste noire.",
+  "User ID not found.": "Identifiant utilisateur introuvable.",
+  "FCM device token not found.": "Jeton d'appareil FCM introuvable.",
+  "Logout successful.": "Déconnexion réussie.",
+
+  "_comment1.5": "This is admin and user side refresh-token api",
+  "{{base_url}}api/users/refresh-token?lang=fr": "logout",
+  "The refresh token is blacklisted.": "Le jeton d'actualisation est sur liste noire.",
+  "Successful": "Réussi",
+
+  "_comment1.6": "This is admin and user side reset password api",
+  "{{base_url}}api/users/reset-password?lang=fr": "reset-password",
+  "User not found": "Utilisateur introuvable",
+  "Current password is incorrect": "Le mot de passe actuel est incorrect",
+  "New password and confirm password do not match": "Le nouveau mot de passe et la confirmation ne correspondent pas",
+  "New password cannot be the same as the current password": "Le nouveau mot de passe ne peut pas être identique à l'actuel",
+  "Password reset successful": "Réinitialisation du mot de passe réussie",
+
+  "_comment1.7": "This is request password reset API",
+  "{{base_url}}api/users/request-password-reset?lang=fr": "request-password-reset",
+  "Email is required": "L'email est requis",
+  "Failed to process password reset request. Please try again.": "Échec du traitement de la demande de réinitialisation du mot de passe. Veuillez réessayer.",
+  "Password Reset Request": "Demande de réinitialisation du mot de passe",
+  "Your password reset code is: {reset_code}. It will expire in 15 minutes.": "Votre code de réinitialisation est : {reset_code}. Il expirera dans 15 minutes.",
+  "Password reset code sent to email": "Code de réinitialisation envoyé à l'email",
+
+  "_comment1.8": "Vérifier l'API OTP de mot de passe oublié",
+  "{{base_url}}api/users/forgot_pwd_otp_ver?lang=fr": "forgot_pwd_otp_ver",
+  "Email or OTP cannot be empty": "L'email ou le code OTP ne peut pas être vide",
+  "Invalid or expired reset code": "Code de réinitialisation invalide ou expiré",
+  "Invalid verification code": "Code de vérification invalide",
+  "OTP verified successfully": "OTP vérifié avec succès",
+
+  "_comment1.9": "API de changement de mot de passe",
+  "{{base_url}}api/users/forgot-password?lang=fr": "forgot_password",
+  "Invalid or expired reset token": "Jeton de réinitialisation invalide ou expiré",
+  "Signup Verification Successful": "Vérification de l'inscription réussie",
+
+  "_comment1.11": "API de changement de mot de passe",
+  "{{base_url}}api/users/change-password?lang=fr": "change-password",
+
+  "_comment1.12": "API Détails du profil utilisateur",
+  "{{base_url}}api/users/user-profile-details?lang=fr": "user-profile-details",
+  "User Not Found": "Utilisateur introuvable",
+  "User profile details retrieved successfully": "Détails du profil utilisateur récupérés avec succès",
+  "Error fetching user profile details": "Erreur lors de la récupération des détails du profil utilisateur",
+
+  "_comment1.13": "API Mise à jour du profil utilisateur",
+  "{{base_url}}api/users/update-profile?lang=fr": "update-profile",
+  "Username must be 3-20 characters long and can only contain letters, numbers, underscores, periods, and dashes.": "Le nom d'utilisateur doit comporter entre 3 et 20 caractères et ne peut contenir que des lettres, chiffres, tirets bas, points et tirets.",
+  "Username already exists. Please choose a different one.": "Le nom d'utilisateur existe déjà. Veuillez en choisir un autre.",
+  "No changes were made to the profile.": "Aucune modification n'a été apportée au profil.",
+  "User Profile Updated successfully.": "Profil utilisateur mis à jour avec succès.",
+  "No fields were provided for update.": "Aucun champ fourni pour la mise à jour.",
+  "Error updating user profile": "Erreur lors de la mise à jour du profil utilisateur",
+
+  "_comment1.14": "API Générer URL pré-signée",
+  "{{base_url}}api/users/get-presigned-url?lang=fr": "get-presigned-url",
+  "Presigned Url generated successfully": "URL pré-signée générée avec succès",
+  "Failed to generate presigned URL": "Échec de la génération de l'URL pré-signée",
+
+  "_comment1.15": "API URL pré-signée pour l'inscription",
+  "{{base_url}}api/users/registeration-get-presigned-url?lang=fr": "registeration-get-presigned-url",
+
+  "_comment1.16": "API Politique de contenu / Confidentialité",
+  "get {{base_url}}api/users/content-policy?lang=fr": "content-policy",
+  "Please provide the valid content for type getting details": "Veuillez fournir le contenu valide pour le type demandé",
+  "Content fetched successfully.": "Contenu récupéré avec succès.",
+
+  "_comment1.17": "API Mise à jour Politique de contenu / Confidentialité",
+  "put {{base_url}}api/users/content-policy?lang=fr": "content-policy",
+  "Invalid type. Allowed values: privacy_policy, about_us": "Type invalide. Valeurs autorisées : privacy_policy, about_us",
+  "No content found for type: {type}": "Aucun contenu trouvé pour le type : {type}",
+  "Content updated successfully.": "Contenu mis à jour avec succès.",
+
+  "_comment1.18": "API Désactivation d'utilisateur",
+  "{{base_url}}api/users/deactivate-user/{user_id}?lang=fr": "deactivate-user",
+  "Invalid user ID format": "Format d'identifiant utilisateur invalide",
+  "You cannot deactivate your own account": "Vous ne pouvez pas désactiver votre propre compte",
+  "User account is already deactivated": "Le compte utilisateur est déjà désactivé",
+  "User account deactivated successfully": "Compte utilisateur désactivé avec succès",
+  "Failed to deactivate user account": "Échec de la désactivation du compte utilisateur",
+  "Error deactivating user": "Erreur lors de la désactivation de l'utilisateur",
+
+  "_comment_language": "Messages de mise à jour de la langue",
+  "Unsupported language. Supported: en, fr": "Langue non prise en charge. Prise en charge: en, fr",
+  "Language already set": "La langue est déjà définie sur l'option sélectionnée",
+  "Language updated successfully": "Langue mise à jour avec succès",
+  "Failed to update language: {error}": "Échec de la mise à jour de la langue : {error}",
+
+  "-------------2-------------":"-------------2-------------",  
+  "files_uploding": "files_api.py",
+
+  "NO_PROFILE_PHOTO_FOUND": "Aucune photo de profil trouvée.",
+  "FILE_RECORD_NOT_FOUND": "Enregistrement du fichier introuvable.",
+  "S3_DELETION_ERROR": "Erreur de suppression S3",
+  "LOCAL_FILE_DELETION_ERROR": "Erreur de suppression du fichier local",
+  "PROFILE_PHOTO_DELETED_SUCCESS": "Photo de profil supprimée avec succès.",
+  "UNEXPECTED_ERROR": "Erreur inattendue",
+
+  "PROFILE_PHOTO_FETCH_SUCCESS": "Photo de profil récupérée avec succès.",
+  "FAILED_TO_FETCH_PROFILE_PHOTO": "Échec de la récupération de la photo de profil",
+
+  
+  "PROFILE_PHOTO_ALREADY_EXISTS": "Une photo de profil existe déjà. Utilisez overwrite=true pour la remplacer.",
+  "PROFILE_PHOTO_UPLOAD_SUCCESS": "Photo de profil téléchargée avec succès.",
+  "PROFILE_PHOTO_UPLOAD_FAILED": "Échec du téléchargement de la photo de profil",
+
+  
+  "UPLOADING_PROFILE_NOT_ALLOWED_TRY_OTHER_API": "Le téléchargement d'une photo de profil via cette API n'est pas autorisé. Veuillez utiliser l'API de photo de profil.",
+  "FILE_UPLOADED_SUCCESS": "{file_type} téléchargé avec succès.",
+  "FILE_UPLOAD_FAILED": "Échec du téléchargement du fichier",
+
+
+  "FILES_FETCHED_SUCCESS": "Fichiers récupérés avec succès.",
+  "FILES_FETCH_FAILED": "Échec de la récupération des fichiers",
+
+
+  "FILE_NOT_FOUND_OR_DELETED": "Fichier introuvable ou déjà supprimé.",
+  "UNAUTHORIZED_DELETE_FILE": "Vous n'êtes pas autorisé à supprimer ce fichier.",
+  "LOCAL_DELETION_ERROR": "Erreur lors de la suppression locale",
+  "FILE_DELETED_SUCCESS": "Fichier supprimé avec succès.",
+  "FILE_DELETE_FAILED": "Échec de la suppression du fichier"
+
+
+
+
+
+
+
+}
