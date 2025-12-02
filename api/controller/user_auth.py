@@ -12,9 +12,9 @@ from botocore.exceptions import ClientError
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from core.utils.auth_utils import *
-from fastapi import Depends, Request, HTTPException
+from fastapi import Request, Header
 from jose import jwt,JWTError
-from config.models.user_models import PyObjectId, UserCreate, get_user_by_email,  store_token, Files, FileType
+from config.models.user_models import PyObjectId, UserCreate, UserRole,  store_token
 from core.utils.helper import validate_pwd,validate_new_pwd,validate_confirm_new_password,serialize_datetime_fields,convert_objectid_to_str
 from core.utils.rate_limiter import rate_limit_check
 from schemas.user_schemas import *
@@ -23,6 +23,7 @@ from tasks import send_password_reset_email_task, send_contact_us_email_task
 from core.utils.redis_helper import redis_client 
 from core.utils.pagination import StandardResultsSetPagination   
 from services.translation import translate_message
+from core.templates.email_templates import *
 
 AWS_S3_REGION = os.getenv("AWS_S3_REGION")
 AWS_S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME")
@@ -278,9 +279,28 @@ async def refresh_token(request: RefreshTokenRequest, lang: str = "en"):
 
     # Verify token and generate new access token
     token_data = verify_refresh_token(request.refresh_token)
-    new_access_token = create_access_token(data={"sub": token_data['sub'], "user_id": token_data['user_id']})
 
-    return response.success_message(translate_message("Successful", lang),data={"access_token": new_access_token, "token_type": "bearer"})
+    await token_collection.update_one(
+        {"refresh_token": request.refresh_token},
+        {"$set": {"is_blacklisted": True}}
+    )
+    user = await user_collection.find_one({"email": token_data["sub"]})
+    if not user:
+        return response.raise_exception(
+            message="User not found.",
+            data={},
+            status_code=404
+        )
+
+    new_access_token, new_refresh_token = generate_login_tokens(user)
+
+    return response.success_message(
+        "Token refreshed successfully",
+        data={
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token
+        }
+    )
 
 
 #controller for logout
@@ -886,3 +906,261 @@ async def delete_user_account_controller(user_id: str, current_user: dict, lang:
             status_code=500
         )
 
+async def signup_controller(payload: Signup):
+    # Step 1: Check if email already exists in DB
+    existing = await user_collection.find_one({"email": payload.email})
+    if existing:
+        return response.error_message("Email already registered. Please log in instead.")
+
+    # Step 2: Generate OTP
+    otp = generate_verification_code()
+    print("OTP: ", otp)
+    # Step 3: Save signup data temporarily in Redis
+    signup_data = {
+        "username": payload.username,
+        "email": payload.email,
+        "password": get_hashed_password(payload.password)
+    }
+
+    await redis_client.setex(
+        f"signup:{payload.email}:data",
+        600,
+        json.dumps(signup_data)
+    )
+
+    # Store OTP for 5 minutes
+    await redis_client.setex(
+        f"signup:{payload.email}:otp",
+        300,
+        otp
+    )
+
+    # Step 4: Send verification email
+    subject, body = signup_verification_template(payload.username, otp)
+    is_html = True
+    await send_email(payload.email, subject, body, is_html)
+
+    return response.success_message("OTP sent successfully. Please verify to continue.", 
+                                    data={"otp": otp})
+
+async def verify_signup_otp_controller(payload):
+    email = payload.email
+    otp = payload.otp
+
+    # Step 1: Get stored OTP
+    stored_otp = await redis_client.get(f"signup:{email}:otp")
+    if not stored_otp:
+        return response.error_message("OTP expired or not found. Please request a new OTP.", 400)
+
+    stored_otp = stored_otp.encode() if isinstance(stored_otp, bytes) else stored_otp
+
+    # Step 2: Compare OTP
+    if otp != stored_otp:
+        return response.error_message("Invalid OTP. Please try again.", 400)
+
+    # Step 3: Get stored signup data
+    temp_data = await redis_client.get(f"signup:{email}:data")
+    if not temp_data:
+        return response.error_message("Signup session expired. Please sign up again.", 400)
+
+    temp_data = json.loads(temp_data.encode())
+
+    # Step 4: Save verified user into MongoDB
+    try:
+        result = await user_collection.insert_one({
+            "username": temp_data["username"],
+            "email": temp_data["email"],
+            "password": temp_data["password"],
+            "membership_type": "basic",
+            "is_verified": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": None,
+            "role": UserRole.USER,
+            "two_factor_enabled": False
+        })
+
+        user_id = str(result.inserted_id)
+
+    except Exception as e:
+        return response.error_message(f"Failed to create user: {str(e)}", 500)
+
+    # Step 5: Cleanup Redis keys
+    await redis_client.delete(f"signup:{email}:otp")
+    await redis_client.delete(f"signup:{email}:data")
+
+    # Success Response
+    return response.success_message(
+        "Email verified successfully!",
+        data={"user_id": user_id}
+    )
+
+async def resend_otp_controller(payload):
+    email = payload.email
+
+    # Step 1: Check if signup session still exists
+    temp_data = await redis_client.get(f"signup:{email}:data")
+    if not temp_data:
+        return response.error_message("Signup session expired. Please start again.", 400)
+
+    # Step 2: Generate new OTP
+    otp = generate_verification_code()
+
+    await redis_client.setex(
+        f"signup:{email}:otp",
+        300,  # 5 minutes
+        otp
+    )
+
+    # Step 3: Send email again
+    subject, body = signup_verification_template(
+        json.loads(temp_data.decode())["username"],
+        otp
+    )
+
+    await send_email(email, subject, body, is_html=True)
+
+    return response.success_message("A new OTP has been sent to your email.")
+
+async def login_controller(payload: LoginRequest):
+    email = payload.email
+    password = payload.password
+    remember = payload.remember_me
+
+    # Step 1: Check user exists
+    user = await user_collection.find_one({"email": email})
+    if not user:
+        return response.error_message("Invalid email or password.", 400)
+
+    # Step 2: Validate password
+    if not verify_password(password, user["password"]):
+        return response.error_message("Invalid email or password.", 400)
+
+    # Step 3: If 2FA disabled → return tokens immediately
+    if not user.get("two_factor_enabled", True):
+        access_token, refresh_token = generate_login_tokens(user)
+        return response.success_message("Login successful", data={
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        })
+
+    # Step 4: If 2FA enabled → generate OTP
+    otp = generate_verification_code()
+
+    await redis_client.setex(f"login:{email}:otp", 300, otp)
+
+    subject, body = login_verification_template(user["username"], otp)
+    await send_email(email, subject, body, is_html=True)
+
+    return response.success_message(
+        "OTP sent to your email. Please verify to continue.",
+        data={
+            "otp_required": True,
+            "otp": otp}
+    )
+
+async def verify_login_otp_controller(payload):
+    email = payload.email
+    otp = payload.otp
+
+    stored_otp = await redis_client.get(f"login:{email}:otp")
+    if not stored_otp:
+        return response.error_message("OTP expired or invalid. Please request a new one.", 400)
+
+    stored_otp = stored_otp.decode() if isinstance(stored_otp, bytes) else stored_otp
+
+    if otp != stored_otp:
+        return response.error_message("Incorrect OTP.", 400)
+
+    user = await user_collection.find_one({"email": email})
+
+    access_token, refresh_token = generate_login_tokens(user)
+
+    # Remove otp after success
+    await redis_client.delete(f"login:{email}:otp")
+
+    return response.success_message("Login successful", data={
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    })
+
+async def resend_login_otp_controller(payload):
+    email = payload.email
+
+    # Check user exists
+    user = await user_collection.find_one({"email": email})
+    if not user:
+        return response.error_message("User not found.", 404)
+
+    # Generate new OTP
+    otp = generate_verification_code()
+
+    await redis_client.setex(f"login:{email}:otp", 300, otp)
+
+    subject, body = login_verification_template(user["username"], otp)
+    await send_email(email, subject, body, is_html=True)
+
+    return response.success_message("A new OTP has been sent to your email.")
+
+async def send_reset_password_otp_controller(payload: ForgotPasswordRequest):
+    email = payload.email
+
+    # Step 1: Check user exists
+    user = await user_collection.find_one({"email": email})
+    if not user:
+        return response.error_message("No account found with this email.", 404)
+
+    # Step 2: Generate OTP
+    otp = generate_verification_code()
+
+    # Save OTP for 5 minutes
+    await redis_client.setex(f"reset:{email}:otp", 300, otp)
+
+    # Email Template
+    subject, body = reset_password_otp_template(user["username"], otp)
+
+    await send_email(email, subject, body, is_html=True)
+
+    return response.success_message("OTP sent to your email.")
+
+async def verify_reset_password_otp_controller(payload):
+    email = payload.email
+    otp = payload.otp
+
+    stored_otp = await redis_client.get(f"reset:{email}:otp")
+
+    if not stored_otp:
+        return response.error_message("OTP expired or invalid.", 400)
+
+    stored_otp = stored_otp.decode() if isinstance(stored_otp, bytes) else stored_otp
+
+    if otp != stored_otp:
+        return response.error_message("Incorrect OTP.", 400)
+
+    # Mark OTP as verified (valid for 10 minutes)
+    await redis_client.setex(f"reset:{email}:verified", 600, "true")
+
+    return response.success_message("OTP verified successfully.")
+
+async def reset_password_controller(payload):
+    email = payload.email
+    new_password = payload.new_password
+
+    # Ensure user completed OTP verification
+    is_verified = await redis_client.get(f"reset:{email}:verified")
+    if not is_verified:
+        return response.error_message("OTP verification required.", 400)
+
+    # Hash new password
+    hashed_password = get_hashed_password(new_password)
+
+    # Update DB
+    await user_collection.update_one(
+        {"email": email},
+        {"$set": {"password": hashed_password}}
+    )
+
+    # Remove reset session data
+    await redis_client.delete(f"reset:{email}:otp")
+    await redis_client.delete(f"reset:{email}:verified")
+
+    return response.success_message("Password reset successfully. Please log in.")

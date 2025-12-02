@@ -11,6 +11,8 @@ from tasks import send_email_task
 from .response_mixin import CustomResponseMixin
 from schemas.tokens_schema import TokenData
 from core.utils.redis_helper import store_in_redis, get_from_redis, delete_from_redis
+from config.models.user_models import store_token
+
 load_dotenv()
 response = CustomResponseMixin()
 
@@ -76,7 +78,7 @@ def verify_token(token: str) -> TokenData:
 
 
 # Function to generate_verification_code
-def generate_verification_code(length: int =6) -> str:
+def generate_verification_code(length: int =4) -> str:
     """
     Generate random 6 digit number
     """
@@ -84,12 +86,45 @@ def generate_verification_code(length: int =6) -> str:
 
 
 # Function to send_email
-async def send_email(to_email: str, subject:str, body:str):  
-    # Trigger the Celery task
-    send_email_task.delay(to_email, subject, body)
+async def send_email(to_email: str, subject: str, body: str, is_html: bool = False):
+    send_email_task.delay(to_email, subject, body, is_html)
 
 
 # Function to verify_refresh_token
 def verify_refresh_token(refresh_token: str):
     payload = jwt.decode(refresh_token, SECRET_REFRESH_KEY, algorithms=[ALGORITHM])
     return payload  # This should include the token data
+
+def generate_login_tokens(user):
+    user_id = str(user["_id"])
+    email = user["email"]
+
+    user_data = {
+        "sub": email,
+        "user_id": user_id,
+        "role": user.get("role", "user")
+    }
+
+    # Create tokens
+    access_token = create_access_token(user_data)
+    refresh_token = create_refresh_token(user_data)
+
+    # Decode expiry times
+    access_payload = jwt.decode(access_token, SECRET_ACCESS_KEY, algorithms=[ALGORITHM])
+    refresh_payload = jwt.decode(refresh_token, SECRET_REFRESH_KEY, algorithms=[ALGORITHM])
+
+    access_expire = datetime.fromtimestamp(access_payload["exp"])
+    refresh_expire = datetime.fromtimestamp(refresh_payload["exp"])
+
+    # Store tokens in DB
+    store_token(
+        user_id=user_id,
+        email=email,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        access_token_expire=access_expire,
+        refresh_token_expire=refresh_expire
+    )
+
+    return access_token, refresh_token
+

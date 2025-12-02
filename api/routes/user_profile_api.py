@@ -25,13 +25,13 @@ class AuthViews:
     """
 
     #api to login a user
-    @router.post("/login", response_model=dict)
-    async def verify_login(request: UserLogin, lang: str = Query(None)):
-        """
-        User login endpoint. JWT token
-        """
-        lang = lang if lang in supported_langs else "en"
-        return await login(request, lang=lang)
+    # @router.post("/login", response_model=dict)
+    # async def verify_login(request: UserLogin, lang: str = Query(None)):
+    #     """
+    #     User login endpoint. JWT token
+    #     """
+    #     lang = lang if lang in supported_langs else "en"
+    #     return await login(request, lang=lang)
 
 
     #api to login admin
@@ -45,13 +45,13 @@ class AuthViews:
 
 
     #api to register an admin and user
-    @router.post("/register", response_model=Response)
-    async def create_user(user: UserCreate, lang: str = Query(None)):
-        """
-        User registration endpoint.
-        """
-        lang = lang if lang in supported_langs else "en"
-        return await create_user(user=user, lang=lang, request=Request)
+    # @router.post("/register", response_model=Response)
+    # async def create_user(user: UserCreate, lang: str = Query(None)):
+    #     """
+    #     User registration endpoint.
+    #     """
+    #     lang = lang if lang in supported_langs else "en"
+    #     return await create_user(user=user, lang=lang, request=Request)
 
 
     #api for refresh-token an admin and user
@@ -107,14 +107,14 @@ class AuthViews:
 
 
     # api for forgot-password
-    @router.post("/forgot-password")
-    async def change_password(request: ForgotPasswordRequest, email: str, lang: str = Query(None)):
-        """
-        Change Password (Forgot Password Flow):-
-        Allows the user to set a new password after successful OTP verification.
-        """
-        lang = lang if lang in supported_langs else "en"
-        return await change_password(request, email, lang)
+    # @router.post("/forgot-password")
+    # async def change_password(request: ForgotPasswordRequest, email: str, lang: str = Query(None)):
+    #     """
+    #     Change Password (Forgot Password Flow):-
+    #     Allows the user to set a new password after successful OTP verification.
+    #     """
+    #     lang = lang if lang in supported_langs else "en"
+    #     return await change_password(request, email, lang)
     
 
 # api for create-admins-file with Hashed Passwords
@@ -195,3 +195,48 @@ async def delete_user_route(
     """
     lang = lang if lang in supported_langs else "en"
     return await delete_user_account_controller(user_id, current_user, lang)
+
+@router.post("/register", response_model=Response)
+async def signup_user(payload: Signup):
+    return await signup_controller(payload)
+
+@router.post("/verify-email")
+async def verify_otp(payload: VerifyOTP):
+    return await verify_signup_otp_controller(payload)
+
+@router.post("/resend-otp")
+async def resend_otp(payload: ResendOTP):
+    return await resend_otp_controller(payload)
+
+@router.post("/login", response_model=Response)
+async def login_user(payload: LoginRequest):
+    """
+    User login API (with optional 2FA OTP)
+    """
+    return await login_controller(payload)
+
+@router.post("/login/verify-otp", response_model=Response)
+async def verify_login_otp(payload: VerifyLoginOtpRequest):
+    """
+    Verify OTP for login (2FA)
+    """
+    return await verify_login_otp_controller(payload)
+
+@router.post("/login/resend-otp", response_model=Response)
+async def resend_login_otp(payload: ResendOtpRequest):
+    """
+    Resend Login OTP
+    """
+    return await resend_login_otp_controller(payload)
+
+@router.post("/forgot-password", response_model=Response)
+async def send_reset_password_otp(payload: ForgotPasswordRequest):
+    return await send_reset_password_otp_controller(payload)
+
+@router.post("/verify-reset-otp", response_model=Response)
+async def verify_reset_password_otp(payload: VerifyResetOtpRequest):
+    return await verify_reset_password_otp_controller(payload)
+
+@router.post("/password-reset", response_model=Response)
+async def reset_password(payload: ResetPasswordRequest):
+    return await reset_password_controller(payload)

@@ -185,7 +185,7 @@ async def monitor_requests(request: Request, call_next):
         logger.error(f"[ERROR] {request.method} {request.url.path} after {duration:.3f}s - {str(e)}")
         raise
 
-
+app.include_router(user_profile_api.router, prefix="/api/auth", tags=["Users"])
 app.include_router(adminauth_route.router)
 
 
