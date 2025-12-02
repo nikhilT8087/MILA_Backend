@@ -330,7 +330,6 @@ async def verify_signup_otp_controller(payload):
             "is_verified": False,
             "created_at": datetime.utcnow(),
             "updated_at": None,
-            "role": UserRole.USER,
             "two_factor_enabled": False
         })
 
