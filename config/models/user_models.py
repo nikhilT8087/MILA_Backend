@@ -85,6 +85,7 @@ class UserCreate(BaseModel):
     is_deactivated: bool = Field(default=False)  # Updated to use enum with validation
     is_deleted: bool = Field(default=False)  # Soft delete flag
     profile_photo_id: Optional[PyObjectId] = None  # Reference to Files
+    two_factor_enabled: bool = Field(default=True)
 
  
     def update_user(self, updated_data: dict):

@@ -1,5 +1,5 @@
 from core.utils.celery_app import celery_app
-from core.utils.send_mail import send_email
+from core.utils.send_mail import smtp_send_email
 from core.utils.response_mixin import CustomResponseMixin
 import os
 import asyncio
@@ -53,7 +53,7 @@ def send_contact_us_email_task(first_name: str, last_name: str, email: str, mobi
         body = f"Message: {message}\n\nEmail: {email}\nPhone: {mobile_number}"
 
         # Send the email to the admin
-        send_email(to_email=ADMIN_EMAIL, subject=subject, body=body)
+        smtp_send_email(to_email=ADMIN_EMAIL, subject=subject, body=body)
 
     except Exception as e:
         raise e
@@ -62,16 +62,11 @@ def send_contact_us_email_task(first_name: str, last_name: str, email: str, mobi
 # Celery task for send_email_task
 response = CustomResponseMixin()
 @celery_app.task(name="tasks.send_email_task")
-def send_email_task(to_email: str, subject: str, body: str):
-    send_email(to_email=to_email, subject=subject, body=body)
+def send_email_task(to_email: str, subject: str, body: str, is_html: bool = False):
+    smtp_send_email(to_email=to_email, subject=subject, body=body, is_html=is_html)
 
 
 # Celery task for send_password_reset_email_task
 @celery_app.task(name="tasks.send_password_reset_email_task")
 def send_password_reset_email_task(to_email: str, subject: str, body: str):
-    send_email(to_email=to_email, subject=subject, body=body)
-
-
-
-
-
+    smtp_send_email(to_email=to_email, subject=subject, body=body)
