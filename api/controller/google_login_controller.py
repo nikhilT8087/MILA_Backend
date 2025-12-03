@@ -27,7 +27,7 @@ async def google_login_controller(id_token: str):
             "is_verified": False,
             "created_at": datetime.utcnow(),
             "updated_at": None,
-            "two_factor_enabled": False,
+            "two_factor_enabled": True,
             "google_login": True,
             "profile_photo_url": google_info.get("picture")
         }
