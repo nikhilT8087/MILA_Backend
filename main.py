@@ -20,6 +20,7 @@ from json import JSONEncoder
 from pydantic import Field
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config.db_seeder.AdminSeeder import seed_admin
+from config.db_seeder.SubscriptionPlanSeeder import seed_subscription_plan
 
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -226,6 +227,8 @@ async def init_scheduler():
             try:
                 await seed_admin()
                 print("[SUCCESS] Admin seeding completed")
+                await seed_subscription_plan()
+                print("[SUCCESS] Subscription Plan seeding completed")
             except Exception as seeder_error:
                 print(f"[ERROR] Admin seeding failed: {seeder_error}")
     except Exception as e:
