@@ -10,4 +10,4 @@ async def google_login(payload: GoogleLoginRequest):
     """
     Google login API
     """
-    return await google_login_controller(payload.id_token)
+    return await google_login_controller(payload)

@@ -239,4 +239,6 @@ class ResetPasswordRequest(BaseModel):
         return self
     
 class GoogleLoginRequest(BaseModel):
-    id_token: str
+    email: EmailStr
+    name: Optional[str] = None
+    google_id: str
