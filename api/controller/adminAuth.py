@@ -127,7 +127,7 @@ async def refresh_token(request: RefreshTokenRequest, lang: str = "en"):
         {"refresh_token": request.refresh_token},
         {"$set": {"is_blacklisted": True}}
     )
-    user = await user_collection.find_one({"email": token_data["sub"]})
+    user = await admin_collection.find_one({"email": token_data["sub"]})
     if not user:
         return response.raise_exception(
             message="User not found.",
