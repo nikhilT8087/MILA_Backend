@@ -46,6 +46,10 @@ class OnboardingModel(BaseModel):
     interested_in: Optional[str] = None
     sexual_preferences: List[str] = []
 
+    tokens : Optional[int] = None
+    public_gallery : Optional[List[str]] = None
+    private_gallery : Optional[List[str]] = None
+
     preferred_city: List[str] = None
     images: List[str] = []
     selfie_image: Optional[str] = None
@@ -66,6 +70,9 @@ class OnboardingStepUpdate(BaseModel):
     passions: Optional[List[str]] = None
     interested_in: Optional[InterestedInEnum] = None
     sexual_preferences: Optional[List[str]] = None
+    tokens : Optional[int] = None
+    public_gallery : Optional[List[str]] = None
+    private_gallery : Optional[List[str]] = None
     preferred_city: Optional[List[str]] = None
     images: Optional[List[str]] = None
     selfie_image: Optional[str] = None
