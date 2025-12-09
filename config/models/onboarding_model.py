@@ -1,6 +1,8 @@
 from pydantic import BaseModel, field_validator
+from pydantic import Field
 from typing import Optional, List
 from datetime import date, datetime
+from config.models.user_models import PyObjectId
 from enum import Enum
 
 class GenderEnum(str, Enum):
@@ -32,6 +34,7 @@ class InterestedInEnum(str , Enum):
 
 
 class OnboardingModel(BaseModel):
+    id: Optional[PyObjectId] = Field(default=None)
     user_id: str
 
     birthdate: Optional[datetime] = None

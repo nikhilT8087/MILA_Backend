@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from datetime import datetime
 from bson import ObjectId
 from pymongo import ReturnDocument
@@ -6,6 +7,13 @@ from datetime import datetime, date
 from api.controller.files_controller import *
 from enum import Enum
 from pymongo import ReturnDocument
+
+def calculate_age(dob: date) -> int:
+    today = date.today()
+    return today.year - dob.year - (
+        (today.month, today.day) < (dob.month, dob.day)
+    )
+
 
 def serialize(data):
     """
@@ -239,3 +247,50 @@ async def format_onboarding_response(onboarding_doc):
     response["selfie_image"] = selfie_out
 
     return response
+
+async def get_basic_user_profile(user_id: str):
+    """
+    Fetch user basic profile:
+        - username (from user_collection)
+        - bio, birthdate, city, interested_in (from onboarding)
+        - age (calculated)
+    """
+
+    onboarding_data = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {
+            "_id": 0,
+            "bio": 1,
+            "birthdate": 1,
+            "city": 1,
+            "interested_in": 1
+        }
+    )
+
+    if not onboarding_data:
+        raise HTTPException(status_code=404, detail="Faield to fetch user details")
+
+    try:
+        user = await user_collection.find_one(
+            {"_id": ObjectId(user_id)},
+            {"_id": 0, "username": 1}
+        )
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+    username = user.get("username") if user else None
+
+    birthdate_value = onboarding_data.get("birthdate")
+    age = None
+
+    if birthdate_value:
+        dob = birthdate_value.date() if isinstance(birthdate_value, datetime) else birthdate_value
+        age = calculate_age(dob)
+
+    return {
+        "username": username,
+        "bio": onboarding_data.get("bio"),
+        "age": age,
+        "city": onboarding_data.get("city"),
+        "interested_in": onboarding_data.get("interested_in"),
+    }

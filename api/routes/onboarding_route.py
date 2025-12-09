@@ -161,6 +161,21 @@ async def save_step(
 
     return formatted
 
+@router.get("/onboarding/profile/{user_id}")
+async def fetch_user_basic_profile(user_id: str):
+    """
+    API to fetch:
+    - name
+    - age
+    - city
+    - bio
+    - interests
+    for a given user_id
+    """
+
+    profile = await get_basic_user_profile(user_id)
+    return profile
+
 
 @router.post("/onboarding/add-images")
 async def upload_image(
@@ -330,3 +345,4 @@ async def upload_selfie(
         "storage_key": storage_key,
         "url": public_url,
     }
+
