@@ -1,12 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException , File
 from bson import ObjectId
+from fastapi import UploadFile
 from config.models.onboarding_model import OnboardingStepUpdate
 from config.db_config import *
+from core.utils.response_mixin import CustomResponseMixin
+from core.utils.helper import serialize_datetime_fields
+from services.translation import translate_message
+from api.controller.files_controller import save_file
+from config.models.user_models import Files
 from api.controller.onboardingController import *
+from services.lists import sexual_preferences , passions , city
 from core.auth import get_current_user
 
 router = APIRouter()
-
+response = CustomResponseMixin()
 
 @router.get("/onboarding/profile")
 async def fetch_onboarding(
@@ -50,9 +57,9 @@ async def fetch_onboarding(
 
 
 @router.post("/onboarding/add-details")
-async def save_step(
+async def handle_onboarding(
     payload: OnboardingStepUpdate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Add or update onboarding details for the authenticated user.
@@ -98,84 +105,89 @@ async def save_step(
         - onboarding_completed flag
         - onboarding record id
     """
-    
+    lang = current_user.get("language", "en")
     user_id = str(current_user["_id"])
     if not user_id:
-        raise HTTPException(401, "Invalid user")
+        raise HTTPException(status_code=401, detail="Invalid user")
 
     payload_dict = payload.model_dump(exclude_unset=True)
 
     if "images" in payload_dict:
-        new_images = payload_dict.get("images", [])
+        new_images = payload_dict.get("images") or []
 
-        if len(new_images) < 1:
-            raise HTTPException(400, "At least 1 image is required.")
-        if len(new_images) > 3:
-            raise HTTPException(400, "You can upload a maximum of 3 images.")
+        if len(new_images) != len(set(new_images)):
+            raise HTTPException(400, "Duplicate image IDs are not allowed.")
+
+        if len(new_images) < MIN_GALLERY_IMAGES:
+            raise HTTPException(400, f"At least {MIN_GALLERY_IMAGES} image(s) required")
+
+        if len(new_images) > MAX_GALLERY_IMAGES:
+            raise HTTPException(400, f"Maximum {MAX_GALLERY_IMAGES} images allowed")
 
         for fid in new_images:
             if not ObjectId.is_valid(fid):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid image id format: {fid}"
-                )
+                raise HTTPException(400, f"Invalid image ID format: {fid}")
 
-            file_doc = await file_collection.find_one({
-                "_id": ObjectId(fid),
-                "is_deleted": False
-            })
+            file_doc = await file_collection.find_one(
+                {"_id": ObjectId(fid), "is_deleted": False}
+            )
             if not file_doc:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Image not found in file storage: {fid}"
-                )
+                raise HTTPException(400, f"Image not found in storage: {fid}")
 
-    if "selfie_image" in payload_dict:
+    if "selfie_image" in payload_dict and payload_dict["selfie_image"]:
         selfie_id = payload_dict["selfie_image"]
 
         if not ObjectId.is_valid(selfie_id):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid selfie id format: {selfie_id}"
-            )
+            raise HTTPException(400, f"Invalid selfie image ID: {selfie_id}")
 
-        selfie_doc = await file_collection.find_one({
-            "_id": ObjectId(selfie_id),
-            "is_deleted": False
-        })
+        selfie_doc = await file_collection.find_one(
+            {"_id": ObjectId(selfie_id), "is_deleted": False}
+        )
         if not selfie_doc:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Selfie image not found in file storage: {selfie_id}"
-            )
+            raise HTTPException(400, f"Selfie image not found: {selfie_id}")
+
+        if "images" in payload_dict and selfie_id in payload_dict.get("images", []):
+            raise HTTPException(400, "Selfie image cannot be added to gallery images.")
 
     updated_doc = await save_onboarding_step(user_id, payload_dict)
 
+    if isinstance(updated_doc, list) and len(updated_doc) > 0:
+        updated_doc = updated_doc[0]
+
     formatted = await format_onboarding_response(updated_doc)
 
-    if payload_dict.get("onboarding_completed") is True:
-        formatted = {
-            "message": "Onboarding completed successfully.",
-            **formatted
-        }
+    response_data = serialize_datetime_fields({
+        "onboarding_completed": updated_doc.get("onboarding_completed", False),
+        "onboarding": formatted
+    })
 
-    return formatted
+    return response.success_message(
+        translate_message("ONBOARDING_SAVED", lang),
+        data=response_data
+    )
 
-@router.get("/onboarding/profile/{user_id}")
-async def fetch_user_basic_profile(user_id: str):
+
+@router.get("/user/basic-profile/{user_id}")
+async def get_basic_user_profile_route(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """
-    API to fetch:
-    - name
-    - age
-    - city
-    - bio
-    - interests
-    for a given user_id
+    API wrapper for get_basic_user_profile()
+    Returns response using success_message() helper.
     """
 
-    profile = await get_basic_user_profile(user_id)
-    return profile
+    lang = current_user.get("language", "en")
 
+    data = await get_basic_user_profile(user_id)
+
+    # Serialize datetime safely (age is int so safe)
+    serialized = serialize_datetime_fields(data)
+
+    return response.success_message(
+        translate_message("USER_BASIC_PROFILE", lang),
+        data=serialized
+    )
 
 @router.post("/onboarding/add-images")
 async def upload_image(
@@ -222,6 +234,8 @@ async def upload_image(
        }
 
     """
+
+    lang = current_user.get("language", "en")
     user_id = str(current_user["_id"])
 
     public_url, storage_key, backend = await save_file(
@@ -240,14 +254,18 @@ async def upload_image(
     )
 
     inserted = await file_collection.insert_one(file_doc.model_dump(by_alias=True))
-    new_file_id = str(inserted.inserted_id)
+    file_id = str(inserted.inserted_id)
 
-    return {
-        "message": "File uploaded successfully",
-        "file_id": new_file_id,
+    response_data = serialize_datetime_fields({
+        "file_id": file_id,
         "storage_key": storage_key,
         "url": public_url,
-    }
+    })
+    return response.success_message(
+        translate_message("FILE_UPLOADED_SUCCESS", lang),
+        data=response_data
+    )
+
 
 @router.post("/onboarding/upload-selfie")
 async def upload_selfie(
@@ -301,6 +319,8 @@ async def upload_selfie(
            "url": "http://127.0.0.1:8080/uploads/selfie/...jpg"
        }
     """
+
+    lang = current_user.get("language", "en")
     user_id = str(current_user["_id"])
 
     onboarding = await onboarding_collection.find_one({"user_id": user_id})
@@ -339,10 +359,40 @@ async def upload_selfie(
         upsert=True
     )
 
-    return {
-        "message": "Selfie uploaded successfully",
+    response_data = serialize_datetime_fields({
         "file_id": new_file_id,
         "storage_key": storage_key,
         "url": public_url,
-    }
+    })
 
+    return response.success_message(
+        translate_message("SELFIE_UPLOADED_SUCCESS", lang),
+        data=response_data
+    )
+
+@router.get("/onboarding/sexual-preferences")
+async def get_sexual_preferences(current_user: dict = Depends(get_current_user)):
+    lang = current_user.get("language", "en")
+
+    return response.success_message(
+        translate_message("FETCH_SUCCESS", lang=lang),
+        data={"sexual_preferences": sexual_preferences}
+    )
+
+@router.get("/onboarding/passions")
+async def get_passions_list(current_user: dict = Depends(get_current_user)):
+    lang = current_user.get("language", "en")
+
+    return response.success_message(
+        translate_message("FETCH_SUCCESS", lang=lang),
+        data={"passions": passions}
+    )
+
+@router.get("/onboarding/city")
+async def get_city(current_user:dict = Depends(get_current_user)):
+    lang = current_user.get("language", "en")
+
+    return response.success_message(
+        translate_message("FETCH_SUCCESS" , lang=lang),
+        data = {"city":city}
+    )
