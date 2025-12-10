@@ -64,6 +64,7 @@ class FileType(str, Enum):
 
 # ---- Files model ----
 class Files(BaseModel):
+    id: Optional[PyObjectId] = Field(default=None)
     storage_key: str
     storage_backend: str  # LOCAL or S3
     file_type: FileType
