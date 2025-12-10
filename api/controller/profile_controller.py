@@ -44,7 +44,7 @@ async def get_user_profile_controller(current_user: dict, lang: str = "en"):
 
     private_gallery_locked = membership_type == "free"
 
-    tokens = onboarding.get("tokens", 0) if onboarding else 0
+    tokens = user.get("tokens", 0) if onboarding else 0
 
     profile_data = [{
             "name": user.get("username"),
