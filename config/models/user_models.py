@@ -88,7 +88,8 @@ class UserCreate(BaseModel):
     is_deleted: bool = Field(default=False)  # Soft delete flag
     profile_photo_id: Optional[PyObjectId] = None  # Reference to Files
     two_factor_enabled: bool = Field(default=True)
-
+    tokens : Optional[int] = None
+    membership_trans_id : Optional[str] = None
  
     def update_user(self, updated_data: dict):
         """Method to update user and set the updated_at field."""
