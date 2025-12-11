@@ -9,7 +9,6 @@ from services.translation import translate_message
 from api.controller.files_controller import save_file
 from config.models.user_models import Files
 from api.controller.onboardingController import *
-from services.lists import sexual_preferences , passions , city
 from core.auth import get_current_user
 
 router = APIRouter()
@@ -377,31 +376,4 @@ async def upload_selfie(
     return response.success_message(
         translate_message("SELFIE_UPLOADED_SUCCESS", lang),
         data=response_data
-    )
-
-@router.get("/onboarding/sexual-preferences")
-async def get_sexual_preferences(current_user: dict = Depends(get_current_user)):
-    lang = current_user.get("language", "en")
-
-    return response.success_message(
-        translate_message("FETCH_SUCCESS", lang=lang),
-        data={"sexual_preferences": sexual_preferences}
-    )
-
-@router.get("/onboarding/passions")
-async def get_passions_list(current_user: dict = Depends(get_current_user)):
-    lang = current_user.get("language", "en")
-
-    return response.success_message(
-        translate_message("FETCH_SUCCESS", lang=lang),
-        data={"passions": passions}
-    )
-
-@router.get("/onboarding/city")
-async def get_city(current_user:dict = Depends(get_current_user)):
-    lang = current_user.get("language", "en")
-
-    return response.success_message(
-        translate_message("FETCH_SUCCESS" , lang=lang),
-        data = {"city":city}
     )
