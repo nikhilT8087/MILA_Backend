@@ -55,10 +55,7 @@ async def save_file(file_obj: UploadFile, file_name: str, user_id: str, file_typ
             async with aiofiles.open(file_path, "wb") as out_file:
                 content = await file_obj.read()
                 await out_file.write(content)
-
-            # Public URL: always forward slashes for frontend
-            # public_url = f"{BASE_URL}uploads/{file_type}/{user_id}/{timestamp}.{ext}"
-            public_url = f"{BASE_URL}{file_type}/{user_id}/{timestamp}.{ext}"
+            public_url = f"{BASE_URL}/{file_type}/{user_id}/{timestamp}.{ext}"
             return public_url, storage_key, "LOCAL"
 
         elif STORAGE_BACKEND == "S3":

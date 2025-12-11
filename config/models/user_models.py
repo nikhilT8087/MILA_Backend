@@ -58,6 +58,8 @@ class FileType(str, Enum):
     PROFILE_PHOTO = "profile_photo"
     DOCUMENT = "document"
     INVOICE = "invoice"
+    ONBOARDING_IMAGE = "onboarding_image"
+    SELFIE = "selfie"
 
 
 # ---- Files model ----

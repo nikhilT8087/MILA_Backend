@@ -8,8 +8,8 @@ from enum import Enum
 from config.models.user_models import PyObjectId
 
 class GenderEnum(str, Enum):
-    man = "man"
-    woman = "woman"
+    male = "male"
+    female = "female"
     non_binary = "non_binary"
     transgender = "transgender"
 
@@ -57,13 +57,13 @@ class OnboardingModel(BaseModel):
     bio: Optional[str] = None
 
     passions: List[str] = []
-    interested_in: Optional[str] = None
+    interested_in: Optional[List[InterestedInEnum]] = None
     sexual_preferences: List[str] = []
 
     public_gallery : Optional[List[PrivateGalleryItem]] = None
     private_gallery : Optional[List[PrivateGalleryItem]] = None
 
-    preferred_city: List[str] = None
+    preferred_city: Optional[List[str]] = None
     images: List[str] = []
     selfie_image: Optional[str] = None
 
@@ -72,8 +72,14 @@ class OnboardingModel(BaseModel):
     created_at: datetime = datetime.utcnow()
     updated_at: datetime = datetime.utcnow()
 
+    class Config:
+        use_enum_values = True
+        arbitrary_types_allowed = True
+
 
 class OnboardingStepUpdate(BaseModel):
+
+    # Step 1 fields
     birthdate: Optional[datetime] = None
     gender: Optional[GenderEnum] = None
     sexual_orientation: Optional[SexualOrientationEnum] = None
@@ -81,7 +87,7 @@ class OnboardingStepUpdate(BaseModel):
     city: Optional[str] = None
     bio: Optional[str] = None
     passions: Optional[List[str]] = None
-    interested_in: Optional[InterestedInEnum] = None
+    interested_in: Optional[List[InterestedInEnum]] = None
     sexual_preferences: Optional[List[str]] = None
     public_gallery : Optional[List[PublicGalleryItem]] = None
     private_gallery : Optional[List[PrivateGalleryItem]] = None
@@ -101,7 +107,7 @@ class OnboardingStepUpdate(BaseModel):
         elif isinstance(value, date):
             parsed = datetime.combine(value, datetime.min.time())
         elif isinstance(value, str):
-            for fmt in ("%d-%m-%Y", "%d/%m/%Y"):
+            for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d"):
                 try:
                     parsed = datetime.strptime(value, fmt)
                     break
@@ -138,10 +144,13 @@ class OnboardingStepUpdate(BaseModel):
         "passions",
         "sexual_preferences",
         "images",
+        "public_gallery",
+        "private_gallery",
+        "preferred_city",
         mode="before"
     )
     @classmethod
-    def validate_lists(cls, value, info):
+    def validate_list_fields(cls, value, info):
         if value is None:
             return None
 
@@ -149,24 +158,24 @@ class OnboardingStepUpdate(BaseModel):
             raise ValueError(f"{info.field_name} must be a list")
 
         if len(value) == 0:
-            raise ValueError(f"{info.field_name} cannot be empty")
+            raise ValueError(f"{info.field_name} cannot be an empty list")
 
-        for item in value:
-            if not isinstance(item, str) or not item.strip():
-                raise ValueError(
-                    f"{info.field_name} cannot contain empty values"
-                )
+        for v in value:
+            if not isinstance(v, str) or not v.strip():
+                raise ValueError(f"{info.field_name} contains empty or invalid values")
 
         return value
+
 
     @field_validator("onboarding_completed", mode="before")
     @classmethod
-    def validate_boolean(cls, value):
+    def validate_onboarding_completed(cls, value):
         if value is None:
-            return value
+            return None
         if not isinstance(value, bool):
-            raise ValueError("onboarding_completed must be a boolean")
+            raise ValueError("onboarding_completed must be boolean")
         return value
+
 
     class Config:
         use_enum_values = True
