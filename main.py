@@ -2,7 +2,8 @@ import asyncio
 import os
 from fastapi import FastAPI, Request
 from api.routes import adminauth_route
-from api.routes import user_profile_api, files_api, subscription_plan_route
+
+from api.routes import user_profile_api, files_api, subscription_plan_route,google_auth_api, apple_auth_api, profile_api
 
 from core.utils.exceptions import CustomValidationError, custom_validation_error_handler, validation_exception_handler
 from fastapi.exceptions import RequestValidationError
@@ -27,11 +28,20 @@ from starlette.middleware.base import BaseHTTPMiddleware
 app = FastAPI()
 
 # Make sure your uploads folder exists
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
-# Mount the uploads folder as static
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+PUBLIC_GALLERY_DIR = os.path.join(UPLOAD_DIR, "public_gallery")
+PRIVATE_GALLERY_DIR = os.path.join(UPLOAD_DIR, "private_gallery")
+PROFILE_PHOTO_DIR = os.path.join(UPLOAD_DIR, "profile_photos")
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(PUBLIC_GALLERY_DIR, exist_ok=True)
+os.makedirs(PRIVATE_GALLERY_DIR, exist_ok=True)
+os.makedirs(PROFILE_PHOTO_DIR, exist_ok=True)
+
+app.mount("/public_gallery", StaticFiles(directory=PUBLIC_GALLERY_DIR))
+app.mount("/private_gallery", StaticFiles(directory=PRIVATE_GALLERY_DIR))
+app.mount("/profile_photos", StaticFiles(directory=PROFILE_PHOTO_DIR))
 
 
 # Health check endpoints
@@ -189,9 +199,9 @@ async def monitor_requests(request: Request, call_next):
 app.include_router(user_profile_api.router, prefix="/api/auth", tags=["Users"])
 app.include_router(subscription_plan_route.api_router, prefix="/api/subscription", tags=["Subscription Plans"])
 app.include_router(adminauth_route.router)
-
-
-
+app.include_router(google_auth_api.router, prefix="/api/google-auth")
+app.include_router(apple_auth_api.router, prefix="/api/apple-auth")
+app.include_router(profile_api.router, prefix="/api/user")
 # Scheduler Instance
 scheduler = BackgroundScheduler()
 

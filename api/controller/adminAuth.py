@@ -122,9 +122,28 @@ async def refresh_token(request: RefreshTokenRequest, lang: str = "en"):
 
     # Verify token and generate new access token
     token_data = verify_refresh_token(request.refresh_token)
-    new_access_token = create_access_token(data={"sub": token_data['sub'], "user_id": token_data['user_id']})
 
-    return response.success_message(translate_message("Successful", lang),data={"access_token": new_access_token, "token_type": "bearer"})
+    await token_collection.update_one(
+        {"refresh_token": request.refresh_token},
+        {"$set": {"is_blacklisted": True}}
+    )
+    user = await admin_collection.find_one({"email": token_data["sub"]})
+    if not user:
+        return response.raise_exception(
+            message="User not found.",
+            data={},
+            status_code=404
+        )
+
+    new_access_token, new_refresh_token = generate_login_tokens(user)
+
+    return response.success_message(
+        "Token refreshed successfully",
+        data={
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token
+        }
+    )
 
 #controller for update_password_controller
 async def update_password_controller(
