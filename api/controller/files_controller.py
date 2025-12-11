@@ -31,8 +31,7 @@ response = CustomResponseMixin()
 
 
 #helper function to save the profile picture
-async def save_file(file_obj: UploadFile, file_name: str, user_id: str, file_type="profile_photo",custom_dir: str = None
-):
+async def save_file(file_obj: UploadFile, file_name: str, user_id: str, file_type="profile_photo"):
     """
     Save uploaded file to LOCAL or S3 based on STORAGE_BACKEND.
     Returns: (public_url, storage_key, backend)
@@ -49,10 +48,7 @@ async def save_file(file_obj: UploadFile, file_name: str, user_id: str, file_typ
 
         if STORAGE_BACKEND == "LOCAL":
             # Local save: use os.path.join for actual filesystem path
-            if custom_dir:
-                dir_path = os.path.join(custom_dir, user_id)
-            else:
-                dir_path = os.path.join(UPLOAD_DIR, file_type, user_id)
+            dir_path = os.path.join(UPLOAD_DIR, file_type, user_id)
             os.makedirs(dir_path, exist_ok=True)
             file_path = os.path.join(dir_path, f"{timestamp}.{ext}")
 
