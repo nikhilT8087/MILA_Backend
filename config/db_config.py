@@ -81,6 +81,10 @@ onboarding_collection = db["user_onboarding"]
 transaction_collection = db["transaction"]
 system_config_collection = db["system_config"]
 user_token_history_collection = db["user_token_history"]
+like_collection = db["like_collection"]
+add_favorite_collection = db["favorites"]
+match_collection = db["match_collection"]
+pass_collection = db["pass_collection"]
 
 async def create_indexes():
     """

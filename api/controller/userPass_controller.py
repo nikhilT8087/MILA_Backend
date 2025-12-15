@@ -1,0 +1,391 @@
+from bson import ObjectId
+from datetime import datetime
+from config.db_config import (
+    onboarding_collection, 
+    user_collection, 
+    file_collection , 
+    add_favorite_collection , 
+    like_collection ,
+    match_collection,
+    pass_collection)
+from api.controller.onboardingController import calculate_age
+from core.utils.response_mixin import CustomResponseMixin
+from core.utils.helper import serialize_datetime_fields
+from services.translation import translate_message
+from api.controller.files_controller import generate_file_url
+
+
+response = CustomResponseMixin()
+
+# Function to return details of the user by user_id
+async def get_user_details(user_id: str, lang: str = "en"):
+
+    # Fetch onboarding/user profile data
+    user_data = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {
+            "_id": 0,
+            "bio": 1,
+            "passions": 1,
+            "city": 1,
+            "birthdate": 1,
+            "tokens": 1,
+        }
+    )
+
+    if not user_data:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    # Fetch basic user data
+    try:
+        user = await user_collection.find_one(
+            {"_id": ObjectId(user_id)},
+            {"_id": 0, "username": 1, "is_verified": 1, "profile_photo_id": 1}
+        )
+    except:
+        return response.error_message(
+            translate_message("INVALID_USER_ID", lang),
+            status_code=400
+        )
+
+    if not user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    username = user.get("username")
+    is_verified = user.get("is_verified")
+    profile_photo_id = user.get("profile_photo_id")
+
+    birthvalue = user_data.get("birthdate")
+    age = None
+
+    if birthvalue:
+        dob = birthvalue.date() if isinstance(birthvalue, datetime) else birthvalue
+        age = calculate_age(dob)
+
+    profile_photo_details = None
+
+    if profile_photo_id:
+        try:
+            file_doc = await file_collection.find_one(
+                {"_id": ObjectId(profile_photo_id)},
+                {"_id": 1, "storage_key": 1, "storage_backend": 1}
+            )
+        except:
+            file_doc = None
+
+        if file_doc:
+            url = await generate_file_url(
+                storage_key=file_doc["storage_key"],
+                backend=file_doc.get("storage_backend")
+            )
+
+            profile_photo_details = {
+                "id": str(file_doc["_id"]),
+                "url": url
+            }
+
+    data = {
+        "username": username,
+        "is_verified": is_verified,
+        "bio": user_data.get("bio"),
+        "age": age,
+        "city": user_data.get("city"),
+        "tokens": user_data.get("tokens"),
+        "passions": user_data.get("passions"),
+        "profile_photo": profile_photo_details
+    }
+
+    response_data = serialize_datetime_fields(data)
+
+    return response.success_message(
+        translate_message("USER_DETAILS_FETCHED", lang),
+        data=response_data
+    )
+
+
+# function help to add user to favorites collection
+async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
+    if user_id == favorite_user_id:
+        return response.error_message(
+            translate_message("CANNOT_ADD_SELF_TO_FAVORITES", lang),
+            status_code=400
+        )
+
+    favorite_user = await user_collection.find_one(
+        {"_id": ObjectId(favorite_user_id)}
+    )
+
+    if not favorite_user:
+        return response.error_message(
+            translate_message("FAVORITE_USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    existing_fav = await add_favorite_collection.find_one(
+        {
+            "user_id": user_id,
+            "favorite_user_ids": favorite_user_id
+        }
+    )
+
+    if existing_fav:
+        return response.error_message(
+            translate_message("USER_ALREADY_IN_FAVORITES", lang),
+            status_code=409
+        )
+
+    await add_favorite_collection.update_one(
+        {"user_id": user_id},
+        {
+            "$addToSet": {"favorite_user_ids": favorite_user_id},
+            "$set": {"updated_at": datetime.utcnow()},
+            "$setOnInsert": {
+                "user_id": user_id,
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    response_data = serialize_datetime_fields({
+        "favorite_user_id": favorite_user_id
+    })
+
+    return response.success_message(
+        translate_message("USER_ADDED_TO_FAVORITES", lang),
+        data=response_data
+    )
+
+# Function to handle like of the users.
+async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
+
+    # Cannot like self
+    if user_id == liked_user_id:
+        return response.error_message(
+            translate_message("CANNOT_LIKE_SELF", lang),
+            status_code=400
+        )
+
+    #  Check liked user exists
+    liked_user = await user_collection.find_one(
+        {"_id": ObjectId(liked_user_id)}
+    )
+
+    if not liked_user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    # Check already liked
+    already_liked = await like_collection.find_one({
+        "user_id": liked_user_id,
+        "liked_by_user_ids": user_id
+    })
+
+    if already_liked:
+        return response.error_message(
+            translate_message("USER_ALREADY_LIKED", lang),
+            status_code=409
+        )
+
+    # Add like
+    await like_collection.update_one(
+        {"user_id": liked_user_id},
+        {
+            "$addToSet": {"liked_by_user_ids": user_id},
+            "$set": {"updated_at": datetime.utcnow()},
+            "$setOnInsert": {
+                "user_id": liked_user_id,
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    #  Check mutual like (MATCH)
+    mutual_like = await like_collection.find_one({
+        "user_id": user_id,
+        "liked_by_user_ids": liked_user_id
+    })
+
+    is_match = False
+
+    if mutual_like:
+        user_pair = sorted([user_id, liked_user_id])
+
+        existing_match = await match_collection.find_one({
+            "user_ids": user_pair
+        })
+
+        if not existing_match:
+            await match_collection.insert_one({
+                "user_ids": user_pair,
+                "created_at": datetime.utcnow()
+            })
+
+        is_match = True
+
+    return response.success_message(
+        translate_message(
+            "MATCH_CREATED" if is_match else "USER_LIKED_SUCCESSFULLY",
+            lang
+        ),
+        data={
+            "liked_user_id": liked_user_id,
+            "is_match": is_match
+        }
+    )
+
+# Function to pass the user.
+async def pass_user(user_id: str, passed_user_id: str, lang: str = "en"):
+
+    # Cannot pass self
+    if user_id == passed_user_id:
+        return response.error_message(
+            translate_message("CANNOT_PASS_SELF", lang),
+            status_code=400
+        )
+
+    #  Check user exists
+    passed_user = await user_collection.find_one(
+        {"_id": ObjectId(passed_user_id)}
+    )
+
+    if not passed_user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    #  Already passed?
+    already_passed = await pass_collection.find_one({
+        "user_id": user_id,
+        "passed_user_ids": passed_user_id
+    })
+
+    if already_passed:
+        return response.error_message(
+            translate_message("USER_ALREADY_PASSED", lang),
+            status_code=409
+        )
+
+    # Store pass
+    await pass_collection.update_one(
+        {"user_id": user_id},
+        {
+            "$addToSet": {"passed_user_ids": passed_user_id},
+            "$set": {"updated_at": datetime.utcnow()},
+            "$setOnInsert": {
+                "user_id": user_id,
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    return response.success_message(
+        translate_message("USER_PASSED_SUCCESSFULLY", lang),
+        data={
+            "passed_user_id": passed_user_id
+        }
+    )
+
+# Function to return the list of the favorites users.
+async def get_my_favorites(user_id: str, lang: str = "en"):
+    fav_doc = await add_favorite_collection.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "favorite_user_ids": 1}
+    )
+
+    favorite_user_ids = fav_doc.get("favorite_user_ids", []) if fav_doc else []
+
+    if not favorite_user_ids:
+        return response.success_message(
+            translate_message("NO_FAVORITES_FOUND", lang),
+            data=[]
+        )
+
+    users_cursor = user_collection.find(
+        {"_id": {"$in": [ObjectId(uid) for uid in favorite_user_ids]}},
+        {"_id": 1, "username": 1, "is_verified": 1, "profile_photo_id": 1}
+    )
+
+    users = []
+    async for user in users_cursor:
+        users.append({
+            "user_id": str(user["_id"]),
+            "username": user.get("username"),
+            "is_verified": user.get("is_verified"),
+            "profile_photo_id": user.get("profile_photo_id")
+        })
+
+    return response.success_message(
+        translate_message("FAVORITES_FETCHED", lang),
+        data=users
+    )
+
+#function to return the liked user list .
+async def get_users_who_liked_me(user_id: str, lang: str = "en"):
+    like_doc = await like_collection.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "liked_by_user_ids": 1}
+    )
+
+    liked_by_user_ids = like_doc.get("liked_by_user_ids", []) if like_doc else []
+
+    if not liked_by_user_ids:
+        return response.success_message(
+            translate_message("NO_LIKES_FOUND", lang),
+            data=[]
+        )
+
+    users_cursor = user_collection.find(
+        {"_id": {"$in": [ObjectId(uid) for uid in liked_by_user_ids]}},
+        {"_id": 1, "username": 1, "is_verified": 1, "profile_photo_id": 1}
+    )
+
+    users = []
+    async for user in users_cursor:
+        users.append({
+            "user_id": str(user["_id"]),
+            "username": user.get("username"),
+            "is_verified": user.get("is_verified"),
+            "profile_photo_id": user.get("profile_photo_id")
+        })
+
+    return response.success_message(
+        translate_message("LIKED_USERS_FETCHED", lang),
+        data=users
+    )
+
+# Function to get tokens for the user
+async def total_token(user_id: str, lang: str = "en"):
+
+    user = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "tokens": 1}
+    )
+
+    print("the data of the user", user)
+
+    if not user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    tokens = user.get("tokens", 0) or 0
+
+    return response.success_message(
+        translate_message("TOKENS_FETCHED", lang),
+        data={
+            "total_tokens": tokens
+        }
+    )
