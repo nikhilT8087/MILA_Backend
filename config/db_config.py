@@ -81,10 +81,10 @@ onboarding_collection = db["user_onboarding"]
 transaction_collection = db["transaction"]
 system_config_collection = db["system_config"]
 user_token_history_collection = db["user_token_history"]
-like_collection = db["like_collection"]
-add_favorite_collection = db["favorites"]
-match_collection = db["match_collection"]
-pass_collection = db["pass_collection"]
+user_like_history = db["user_like_history"]
+favorite_collection = db["favorite_collection"]
+user_match_history = db["users_matched_history"]
+user_passed_hostory = db["user_passed_history"]
 
 async def create_indexes():
     """
@@ -92,10 +92,44 @@ async def create_indexes():
     Currently no indexes are created.
     """
     try:
-        # No indexes to create at the moment
+        print("🔧 Creating database indexes...")
+
+        # Favorites
+        await favorite_collection.create_index(
+            [("user_id", 1), ("favorite_user_ids", 1)],
+            name="idx_favorite_user"
+        )
+
+        # Likes (core matching logic)
+        await user_like_history.create_index(
+            [("user_id", 1), ("liked_by_user_ids", 1)],
+            name="idx_user_likes"
+        )
+
+        # Matches (prevent duplicate matches)
+        await user_match_history.create_index(
+            [("user_ids", 1)],
+            unique=True,
+            name="idx_unique_user_match"
+        )
+
+        # Passed users
+        await user_passed_hostory.create_index(
+            [("user_id", 1), ("passed_user_ids", 1)],
+            name="idx_user_passed"
+        )
+
+        # Onboarding (token & profile fetch)
+        await onboarding_collection.create_index(
+            [("user_id", 1)],
+            name="idx_onboarding_user"
+        )
+
+        print("✅ Database indexes created successfully")
         return True
+
     except Exception as e:
-        print(f"------------Error creating indexes: {e}")
+        print(f"❌ Error creating indexes: {e}")
         return False
 
         

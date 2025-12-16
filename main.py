@@ -236,6 +236,12 @@ async def init_scheduler():
         else:
             print("[SUCCESS] Database initialized successfully")
 
+            #  CREATE INDEXES HERE
+            try:
+                await create_indexes()
+                print("[SUCCESS] Database indexes created")
+            except Exception as index_error:
+                print(f"[ERROR] Index creation failed: {index_error}")
             try:
                 await seed_admin()
                 print("[SUCCESS] Admin seeding completed")

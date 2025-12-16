@@ -9,20 +9,22 @@ from pymongo import ReturnDocument
 from config.db_config import (
     onboarding_collection,
     file_collection,
-    user_collection,
+    user_collection,onboarding_collection , user_collection , file_collection
 )
 from api.controller.files_controller import generate_file_url
 from core.utils.helper import convert_objectid_to_str
+from fastapi import HTTPException , status
+from bson import ObjectId
+from datetime import datetime
+from core.utils.response_mixin import CustomResponseMixin
+from core.utils.helper import serialize_datetime_fields
+from services.translation import translate_message
+from core.utils.age_calculation import calculate_age
+
+response = CustomResponseMixin()
 
 MIN_GALLERY_IMAGES = 1
 MAX_GALLERY_IMAGES = 3
-
-def calculate_age(dob: date) -> int:
-    today = date.today()
-    return today.year - dob.year - (
-        (today.month, today.day) < (dob.month, dob.day)
-    )
-
 
 def normalize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     ## Use inbuild function for this 
@@ -244,3 +246,71 @@ async def get_basic_user_profile(user_id: str) -> Dict[str, Any]:
         "interested_in": onboarding_data.get("interested_in"),
     }
     return profile
+
+
+async def fetch_user_by_id(user_id: str, lang: str):
+    user_data = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {
+            "_id": 0,
+            "bio": 1,
+            "passions": 1,
+            "city": 1,
+            "birthdate": 1,
+            "tokens": 1,
+        }
+    )
+
+    if not user_data:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch user details"
+        )
+
+    user = await user_collection.find_one(
+        {"_id": ObjectId(user_id)},
+        {"_id": 0, "username": 1, "is_verified": 1, "profile_photo_id": 1}
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    age = None
+    if user_data.get("birthdate"):
+        dob = (
+            user_data["birthdate"].date()
+            if hasattr(user_data["birthdate"], "date")
+            else user_data["birthdate"]
+        )
+        age = calculate_age(dob)
+
+    profile_photo = None
+    if user.get("profile_photo_id"):
+        file_doc = await file_collection.find_one(
+            {"_id": ObjectId(user["profile_photo_id"])},
+            {"storage_key": 1, "storage_backend": 1}
+        )
+        if file_doc:
+            url = await generate_file_url(
+                storage_key=file_doc["storage_key"],
+                backend=file_doc.get("storage_backend")
+            )
+            profile_photo = {
+                "id": str(file_doc["_id"]),
+                "url": url
+            }
+
+    return serialize_datetime_fields({
+        "user_id": user_id,
+        "username": user.get("username"),
+        "is_verified": user.get("is_verified"),
+        "bio": user_data.get("bio"),
+        "age": age,
+        "city": user_data.get("city"),
+        "tokens": user_data.get("tokens"),
+        "passions": user_data.get("passions"),
+        "profile_photo": profile_photo
+    })

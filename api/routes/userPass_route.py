@@ -1,24 +1,38 @@
 from fastapi import APIRouter ,Depends
-from api.controller.userPass_controller import (
-    get_user_details , 
-    add_to_fav ,
-    like_user ,
-    pass_user ,
-    get_my_favorites , 
-    get_users_who_liked_me,
-    total_token)
 from core.auth import get_current_user
-from config.models.userPass_model import AddFavoriteRequest , LikeUserRequest , PassUserRequest
+from api.controller.home_controller import get_home_suggestions
+from config.models.userPass_model import(
+     add_to_fav , 
+     like_user , 
+     pass_user , 
+     get_my_favorites , 
+     total_token , 
+     get_users_who_liked_me)
+from core.utils.response_mixin import CustomResponseMixin
+from services.translation import translate_message
+from schemas.userpass_schema import( 
+    AddFavoriteRequest , 
+    PassUserRequest,
+    LikeUserRequest
+)
 
 router = APIRouter()
+response = CustomResponseMixin()
 
 supported_langs = ["en" , "fr"]
 
-# Route to get the users details.
-@router.get("/user/details/{user_id}",response_model =dict)
-async def get_usersDetails(user_id:str , current_user: dict = Depends(get_current_user)):
-    response = await get_user_details(user_id)
-    return response
+@router.get("/home")
+async def home(
+    current_user: dict = Depends(get_current_user),
+    lang: str = "en"
+):
+    data = await get_home_suggestions(str(current_user["_id"]), lang)
+
+    return response.success_message(
+        translate_message("HOME_SUGGESTIONS_FETCHED", lang),
+        data=data
+    )
+
 
 # Route to handle user like flow
 @router.post("/user/like", response_model=dict)
