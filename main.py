@@ -236,6 +236,7 @@ async def init_scheduler():
             print("[SUCCESS] Database initialized successfully")
 
             try:
+                await create_indexes()
                 await seed_admin()
                 print("[SUCCESS] Admin seeding completed")
                 await seed_subscription_plan()

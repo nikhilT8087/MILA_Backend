@@ -12,3 +12,13 @@ class CreateTokenHistory(BaseModel):
     balance_after: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class TokenHistoryResponse(BaseModel):
+    user_id: str
+    delta: int
+    type: str
+    reason: str
+    balance_before: str
+    balance_after: str
+    created_at: datetime
+
+
