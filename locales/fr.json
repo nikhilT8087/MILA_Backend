@@ -172,7 +172,9 @@
   "TRANSACTION_PAYMENT_DETAILS_NOT_FOUND": "Les détails de la transaction de paiement n'ont pas pu être trouvés.",
 
   "Purchased_Subscription_Plan": "Nouvel abonnement souscrit.",
-  "Account_Verified": "VÉRIFICATION DU COMPTE."
+  "Account_Verified": "VÉRIFICATION DU COMPTE.",
+
+  "ERROR_WHILE_FETCHING_TOKEN_DETAILS": "Une erreur est survenue lors de la récupération des informations du jeton utilisateur."
 
 
 
