@@ -404,7 +404,10 @@ async def resend_login_otp_controller(payload):
     subject, body = login_verification_template(user["username"], otp)
     await send_email(email, subject, body, is_html=True)
 
-    return response.success_message("A new OTP has been sent to your email.", status_code=200)
+    return response.success_message(
+        "A new OTP has been sent to your email.",
+        data=[{"otp": otp}],
+        status_code=200)
 
 async def send_reset_password_otp_controller(payload: ForgotPasswordRequest):
     email = payload.email
