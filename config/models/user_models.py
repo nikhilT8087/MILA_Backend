@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, model_validator,field_validator
-from typing import Optional, Union, Any, Callable
+from typing import Optional, Union, Any, Callable, Dict, List
 from pydantic import GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
@@ -60,7 +60,8 @@ class FileType(str, Enum):
     INVOICE = "invoice"
     ONBOARDING_IMAGE = "onboarding_image"
     SELFIE = "selfie"
-
+    PUBLIC_GALLERY = "public_gallery"
+    PRIVATE_GALLERY = "private_gallery"
 
 # ---- Files model ----
 class Files(BaseModel):
@@ -183,3 +184,45 @@ async def get_user_by_email(data: str) -> UserCreate:
         return False
     # return UserCreate(**user)
     return user["_id"]
+
+async def get_user_details(
+        condition: Dict[str, Any],
+        fields: Optional[List[str]] = None
+):
+    projection = None
+    if fields:
+        projection = {field: 1 for field in fields}
+        # If user didn't explicitly ask for _id, exclude it
+        if "_id" not in fields:
+            projection["_id"] = 0
+
+
+    return await user_collection.find_one(
+        condition,
+        projection
+    )
+
+async def get_users_list(
+    condition: Dict[str, Any],
+    fields: Optional[List[str]] = None,
+    skip: int = 0,
+    limit: int = 10
+):
+    projection = None
+    if fields:
+        projection = {field: 1 for field in fields}
+        if "_id" not in fields:
+            projection["_id"] = 0
+
+    cursor = (
+        user_collection
+        .find(condition, projection)
+        .skip(skip)
+        .limit(limit)
+        .sort("created_at", -1)
+    )
+
+    users = await cursor.to_list(length=limit)
+    total = await user_collection.count_documents(condition)
+
+    return users, total

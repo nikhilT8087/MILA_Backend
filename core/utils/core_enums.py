@@ -18,5 +18,9 @@ class TransactionStatus(str, Enum):
     PARTIAL = "partial payment"
 
 class TokenTransactionReason(str, Enum):
-    SUBSCRIPTION = "Purchased Subscription Plan"
-    ACCOUNT_VERIFIED = "Account Verified"
+    SUBSCRIPTION = "Purchased_Subscription_Plan"
+    ACCOUNT_VERIFIED = "Account_Verified"
+
+class LoginStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"

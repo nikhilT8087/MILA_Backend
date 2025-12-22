@@ -2,6 +2,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient  #for the cron job to query in scheuler
 from config.basic_config import settings
 from urllib.parse import quote_plus
+from pymongo import ASCENDING, DESCENDING
 import asyncio
 
 #uri = "mongodb://localhost:27017/"
@@ -126,6 +127,10 @@ async def create_indexes():
         )
 
         print("✅ Database indexes created successfully")
+        await user_token_history_collection.create_index(
+            [("user_id", ASCENDING), ("created_at", DESCENDING)],
+            name="user_id_created_at_idx"
+        )
         return True
 
     except Exception as e:
