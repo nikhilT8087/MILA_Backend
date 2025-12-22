@@ -297,14 +297,19 @@ async def shutdown_event():
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = exc.errors()
-    
-    # Extract field names and error messages
-    formatted_errors = {err["loc"][-1]: err["msg"] for err in errors}  
+
+    # Extract field -> message mapping
+    formatted_errors = {
+        err["loc"][-1]: err["msg"].replace("Value error, ", "")
+        for err in errors
+    }
+
+    # Pick the first error message for top-level message
+    first_error_message = next(iter(formatted_errors.values()))
 
     return JSONResponse(
         content={
-            "message": "Validation Error",
-            "data": {"errors": formatted_errors},  # More readable error structure
+            "message": first_error_message,
             "success": False
         },
         status_code=422  # Use 422 for validation errors
