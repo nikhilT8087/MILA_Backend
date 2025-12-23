@@ -268,30 +268,6 @@ async def get_users_who_liked_me(user_id: str, lang: str = "en"):
         data=users
     )
 
-# Function to get tokens for the user
-async def total_token(user_id: str, lang: str = "en"):
-
-    user = await onboarding_collection.find_one(
-        {"user_id": user_id},
-        {"_id": 0, "tokens": 1}
-    )
-
-    print("the data of the user", user)
-
-    if not user:
-        return response.error_message(
-            translate_message("USER_NOT_FOUND", lang),
-            status_code=404
-        )
-
-    tokens = user.get("tokens", 0) or 0
-
-    return response.success_message(
-        translate_message("TOKENS_FETCHED", lang),
-        data={
-            "total_tokens": tokens
-        }
-    )
 
 async def get_user_login_status_internal(user_id: str, lang: str = "en"):
     """

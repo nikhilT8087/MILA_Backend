@@ -4,9 +4,14 @@ from config.db_config import (
     user_passed_hostory,
     user_match_history
 )
+from core.utils.response_mixin import CustomResponseMixin
+from services.translation import translate_message
 from core.utils.age_calculation import calculate_age
 from api.controller.onboardingController import fetch_user_by_id
 from bson import ObjectId
+
+response = CustomResponseMixin()
+
 
 async def _get_excluded_user_ids(user_id: str) -> set:
     excluded = {user_id}
@@ -25,85 +30,95 @@ async def _get_excluded_user_ids(user_id: str) -> set:
     return excluded
 
 async def get_home_suggestions(user_id: str, lang: str = "en"):
-    user = await onboarding_collection.find_one({"user_id": user_id})
+    try:
+        user = await onboarding_collection.find_one({"user_id": user_id})
 
-    if not user or not user.get("onboarding_completed"):
-        return {
-            "count": 0,
-            "results": [],
-            "message": "Onboarding not completed"
+        if not user or not user.get("onboarding_completed"):
+            return response.success_message(
+                translate_message("ONBOARDING_NOT_COMPLETED", lang),
+                data={
+                    "count": 0,
+                    "results": []
+                }
+            )
+
+        excluded_ids = await _get_excluded_user_ids(user_id)
+
+        #  HARD FILTERS
+        query = {
+            "onboarding_completed": True,
+            "user_id": {"$nin": list(excluded_ids)},
+            "interested_in": {"$in": [user.get("gender")]},
         }
 
-    excluded_ids = await _get_excluded_user_ids(user_id)
+        # Sexual preferences
+        if user.get("sexual_preferences"):
+            query["sexual_preferences"] = {
+                "$in": user["sexual_preferences"]
+            }
 
-    # 1️ HARD FILTERS (Core preferences)
-    query = {
-        "onboarding_completed": True,
-        "user_id": {"$nin": list(excluded_ids)},
-        "interested_in": {"$in": [user.get("gender")]},
-    }
+        # Country preference
+        if user.get("preferred_country"):
+            query["country"] = {
+                "$in": user["preferred_country"]
+            }
 
-    # Sexual preferences → hard filter
-    if user.get("sexual_preferences"):
-        query["sexual_preferences"] = {
-            "$in": user["sexual_preferences"]
-        }
+        cursor = onboarding_collection.find(query)
 
-    # Country
-    if user.get("preferred_country"):
-        query["country"] = {
-            "$in": user["preferred_country"]
-        }
+        user_passions = set(user.get("passions", []))
+        now = datetime.utcnow()
+        results = []
 
-    cursor = onboarding_collection.find(query)
+        async for candidate in cursor:
+            details = await fetch_user_by_id(candidate["user_id"], lang)
+            if not details:
+                continue
 
-    # 3️ Prioritization signals ONLY
+            priority = {
+                "is_online": False,
+                "recently_active": False,
+                "shared_interests": 0
+            }
 
-    user_passions = set(user.get("passions", []))
-    now = datetime.utcnow()
+            # Online / recent activity
+            if candidate.get("is_online"):
+                priority["is_online"] = True
+            elif candidate.get("last_active_at"):
+                last_active = candidate["last_active_at"]
+                if isinstance(last_active, datetime) and now - last_active <= timedelta(days=7):
+                    priority["recently_active"] = True
 
-    results = []
+            # Shared interests
+            candidate_passions = set(candidate.get("passions", []))
+            priority["shared_interests"] = len(user_passions & candidate_passions)
 
-    async for candidate in cursor:
-        details = await fetch_user_by_id(candidate["user_id"], lang)
-        if not details:
-            continue
+            details["_priority"] = priority
+            results.append(details)
 
-        priority = {
-            "is_online": False,
-            "recently_active": False,
-            "shared_interests": 0
-        }
+        # 2️ SORTING (ranking only)
+        results.sort(
+            key=lambda x: (
+                x["_priority"]["is_online"],
+                x["_priority"]["recently_active"],
+                x["_priority"]["shared_interests"],
+            ),
+            reverse=True
+        )
 
-        # Activity status
-        if candidate.get("is_online"):
-            priority["is_online"] = True
-        elif candidate.get("last_active_at"):
-            last_active = candidate["last_active_at"]
-            if isinstance(last_active, datetime) and now - last_active <= timedelta(days=7):
-                priority["recently_active"] = True
+        for r in results:
+            r.pop("_priority", None)
 
-        # Shared interests (ranking only)
-        candidate_passions = set(candidate.get("passions", []))
-        priority["shared_interests"] = len(user_passions & candidate_passions)
+        return response.success_message(
+            translate_message("HOME_SUGGESTIONS_FETCHED", lang),
+            data={
+                "count": len(results),
+                "results": results
+            }
+        )
 
-        details["_priority"] = priority
-        results.append(details)
-
-    # 4️ Ordering (NO filtering)
-    results.sort(
-        key=lambda x: (
-            x["_priority"]["is_online"],
-            x["_priority"]["recently_active"],
-            x["_priority"]["shared_interests"],
-        ),
-        reverse=True
-    )
-
-    for r in results:
-        r.pop("_priority", None)
-
-    return {
-        "count": len(results),
-        "results": results
-    }
+    except Exception as e:
+        return response.raise_exception(
+            translate_message("ERROR_WHILE_FETCHING_HOME_SUGGESTIONS", lang),
+            data=str(e),
+            status_code=500
+        )

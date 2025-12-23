@@ -6,7 +6,6 @@ from config.models.userPass_model import(
      like_user , 
      pass_user , 
      get_my_favorites , 
-     total_token , 
      get_users_who_liked_me, 
      get_user_login_status_internal)
 from core.utils.response_mixin import CustomResponseMixin
@@ -27,11 +26,9 @@ async def home(
     current_user: dict = Depends(get_current_user),
     lang: str = "en"
 ):
-    data = await get_home_suggestions(str(current_user["_id"]), lang)
-
-    return response.success_message(
-        translate_message("HOME_SUGGESTIONS_FETCHED", lang),
-        data=data
+    return await get_home_suggestions(
+        user_id=str(current_user["_id"]),
+        lang=lang
     )
 
 
@@ -97,15 +94,6 @@ async def get_liked_me_users(
 ):
     user_id = str(current_user["_id"])
     return await get_users_who_liked_me(user_id, lang)
-
-# API to get the count of the token
-@router.get("/user/tokens",response_model=dict)
-async def get_total_tokens(
-    current_user:dict = Depends(get_current_user),
-    lang : str = "en"
-):
-    user_id = str(current_user["_id"])
-    return await total_token(user_id  , lang)
 
 @router.get("/user/login-status")
 async def get_user_login_status_api(
