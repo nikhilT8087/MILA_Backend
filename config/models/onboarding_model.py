@@ -27,7 +27,8 @@ class MaritalStatusEnum(str, Enum):
     single = "single"
     married = "married"
     divorced = "divorced"
-    widowed = "widowed"
+    in_relationship = "in_relationship"
+    open = "open"
 
 class InterestedInEnum(str , Enum):
     male = "male"
@@ -53,7 +54,7 @@ class OnboardingModel(BaseModel):
     sexual_orientation: Optional[str] = None
     marital_status: Optional[str] = None
 
-    city: Optional[str] = None
+    country: Optional[str] = None
     bio: Optional[str] = None
 
     passions: List[str] = []
@@ -64,7 +65,7 @@ class OnboardingModel(BaseModel):
     public_gallery : Optional[List[PrivateGalleryItem]] = None
     private_gallery : Optional[List[PrivateGalleryItem]] = None
 
-    preferred_city: Optional[List[str]] = None
+    preferred_country: Optional[List[str]] = None
     images: List[str] = []
     selfie_image: Optional[str] = None
 
@@ -85,7 +86,7 @@ class OnboardingStepUpdate(BaseModel):
     gender: Optional[GenderEnum] = None
     sexual_orientation: Optional[SexualOrientationEnum] = None
     marital_status: Optional[MaritalStatusEnum] = None
-    city: Optional[str] = None
+    country: Optional[str] = None
     bio: Optional[str] = None
     passions: Optional[List[str]] = None
     interested_in: Optional[List[InterestedInEnum]] = None
@@ -93,7 +94,7 @@ class OnboardingStepUpdate(BaseModel):
     tokens : Optional[int] = None
     public_gallery : Optional[List[PublicGalleryItem]] = None
     private_gallery : Optional[List[PrivateGalleryItem]] = None
-    preferred_city: Optional[List[str]] = None
+    preferred_country: Optional[List[str]] = None
     images: Optional[List[str]] = None
     selfie_image: Optional[str] = None
     onboarding_completed: Optional[bool] = None
@@ -126,7 +127,7 @@ class OnboardingStepUpdate(BaseModel):
         return parsed
 
     @field_validator(
-        "city",
+        "country",
         "bio",
         "selfie_image",
         "interested_in",
@@ -148,7 +149,7 @@ class OnboardingStepUpdate(BaseModel):
         "images",
         "public_gallery",
         "private_gallery",
-        "preferred_city",
+        "preferred_country",
         mode="before"
     )
     @classmethod
