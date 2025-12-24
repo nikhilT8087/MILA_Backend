@@ -175,7 +175,8 @@
   "Purchased_Subscription_Plan": "Purchased New Subscription Plan.",
   "Account_Verified": "Account Verification.",
 
-  "ERROR_WHILE_FETCHING_TOKEN_DETAILS": "An error occurred while fetching the user token details."
+  "ERROR_WHILE_FETCHING_TOKEN_DETAILS": "An error occurred while fetching the user token details.",
+  "TOKEN_PACKAGE_PLAN_NOT_FOUND": "The token package plan was not found."
 
 
 

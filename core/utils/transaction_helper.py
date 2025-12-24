@@ -181,6 +181,7 @@ async def build_transaction_model(
     plan_data: Dict[str, Any],
     transaction_details: Dict[str, Any],
     partial_payment_data: Dict[str, Any] = None,
+    trans_type:TransactionType = TransactionType.SUBSCRIPTION_TRANSACTION.value
 ) -> TransactionCreateModel:
     plan_amount = float(plan_data["amount"])
     paid_amount = float(transaction_details["amount"])
@@ -205,7 +206,7 @@ async def build_transaction_model(
         remaining_amount=remaining_amount,
         status=status,
         payment_details=payment_details,
-        trans_type = TransactionType.SUBSCRIPTION_TRANSACTION.value
+        trans_type = trans_type
     )
 
 async def handle_full_payment(
@@ -299,6 +300,7 @@ async def _update_user_membership_and_tokens(
         reason=TokenTransactionReason.SUBSCRIPTION.value,
         balance_before=str(current_tokens),
         balance_after=str(new_balance),
+        txn_id=str(transaction_id),
     )
     await create_user_token_history(data=token_history_data)
 
@@ -381,6 +383,136 @@ async def mark_full_payment_received(
         user_id=user_id,
         user_details=user_details,
         on_subscribe_tokens=on_subscribe_tokens,
+        transaction_id=doc["_id"],
+    )
+
+    return doc
+
+async def _prepare_transaction_for_token_purchase(
+    transaction_data: TransactionCreateModel,
+    plan_data: Dict[str, Any],
+):
+    """
+        Prepares the transaction data for a new token purchase by assigning the
+        token quantity based on the selected plan details.
+
+        :param transaction_data: TransactionCreateModel instance containing the
+                                 initial transaction information.
+        :param plan_data: Dictionary containing plan details, including the number
+                          of tokens to be purchased.
+        :return: Updated TransactionCreateModel with the token field populated.
+    """
+    transaction_data.tokens = int(plan_data['tokens'])
+    return transaction_data
+
+async def handle_token_full_payment(
+    transaction_data: TransactionCreateModel,
+    plan_data: Dict[str, Any],
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+        Handles token credit processing for fully paid transactions.
+        This function prepares the transaction data for a token purchase,
+        retrieves user details, persists the transaction record, and updates
+        the user's token balance along with token transaction history.
+
+        :param transaction_data: TransactionCreateModel instance containing
+                                 transaction information for the token purchase.
+        :param plan_data: Dictionary containing token plan details.
+        :param user_id: Unique identifier of the user receiving the tokens.
+        :return: Dictionary containing the persisted transaction record.
+    """
+    transaction_data= await _prepare_transaction_for_token_purchase(
+        transaction_data=transaction_data,
+        plan_data=plan_data,
+    )
+    user_details = await user_collection.find_one({"_id": ObjectId(user_id)})
+    # 3. Persist transaction
+    doc = await store_transaction_details(transaction_data)
+
+    # 4. Token history and user token updates
+    await _add_user_token_history_and_tokens(
+        user_id=user_id,
+        user_details=user_details,
+        on_token_package=int(transaction_data.tokens),
+        transaction_id=doc["_id"],
+    )
+    return doc
+
+async def _add_user_token_history_and_tokens(
+    user_id: str,
+    user_details: Dict[str, Any],
+    on_token_package: int,
+    transaction_id: ObjectId,
+) -> None:
+    """
+        Updates the user's token balance and records a token transaction history entry.
+        This function calculates the new token balance based on the purchased token package,
+        creates a token history record for auditing purposes, and updates the user's
+        token balance in the user collection.
+
+        :param user_id: Unique identifier of the user whose token balance is being updated.
+        :param user_details: Dictionary containing the user's current details, including
+                             existing token balance.
+        :param on_token_package: Number of tokens to be credited to the user's account.
+        :param transaction_id: Identifier of the transaction associated with the token purchase.
+        :return: None
+    """
+
+    current_tokens = int(user_details.get("tokens") or 0)
+    new_balance = current_tokens + on_token_package
+    # Record token history (always, even if already active)
+    token_history_data = CreateTokenHistory(
+        user_id=str(ObjectId(user_id)),
+        delta=on_token_package,
+        type=TokenTransactionType.CREDIT.value,
+        reason=TokenTransactionReason.TOKEN_PURCHASE.value,
+        balance_before=str(current_tokens),
+        balance_after=str(new_balance),
+        txn_id=str(transaction_id),
+    )
+    await create_user_token_history(data=token_history_data)
+    await user_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"tokens": str(new_balance)}},
+        )
+    return
+
+async def mark_token_full_payment_received(
+    transaction_data: TransactionCreateModel,
+    plan_data: Dict[str, Any],
+    user_id: str,
+    package_id:str
+) -> Dict[str, Any]:
+    """
+        Marks a token transaction as fully paid and credits tokens to the user's account.
+
+        This function prepares the transaction data for a token purchase, retrieves
+        user details, updates the existing transaction record to reflect full payment,
+        and credits the corresponding tokens to the user. It also records the token
+        transaction history for auditing purposes.
+
+        :param transaction_data: TransactionCreateModel instance containing transaction
+                                 information to be updated.
+        :param plan_data: Dictionary containing token package plan details.
+        :param user_id: Unique identifier of the user receiving the tokens.
+        :param package_id: Identifier of the token package (subscription) being purchased.
+        :return: Dictionary containing the updated transaction record.
+    """
+    transaction_data = await _prepare_transaction_for_token_purchase(
+        transaction_data = transaction_data,
+        plan_data = plan_data,
+    )
+    user_details = await user_collection.find_one({"_id": ObjectId(user_id)})
+    # 3. Persist transaction
+    doc = await update_transaction_details(doc=TransactionUpdateModel(**transaction_data.model_dump()),subscription_id=package_id)
+
+
+    # 4. Token history and user token updates
+    await _add_user_token_history_and_tokens(
+        user_id=user_id,
+        user_details=user_details,
+        on_token_package=int(transaction_data.tokens),
         transaction_id=doc["_id"],
     )
 

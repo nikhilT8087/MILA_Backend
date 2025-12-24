@@ -20,6 +20,7 @@ class TransactionStatus(str, Enum):
 class TokenTransactionReason(str, Enum):
     SUBSCRIPTION = "Purchased_Subscription_Plan"
     ACCOUNT_VERIFIED = "Account_Verified"
+    TOKEN_PURCHASE = "Token_Purchase"
 
 class LoginStatus(str, Enum):
     ACTIVE = "active"
