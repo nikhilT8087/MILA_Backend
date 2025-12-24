@@ -73,6 +73,7 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
     if user_id == liked_user_id:
         return response.error_message(
             translate_message("CANNOT_LIKE_SELF", lang),
+            data=[],
             status_code=400
         )
 
@@ -84,6 +85,7 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
     if not liked_user:
         return response.error_message(
             translate_message("USER_NOT_FOUND", lang),
+            data=[],
             status_code=404
         )
 
@@ -270,7 +272,8 @@ async def get_users_who_liked_me(user_id: str, lang: str = "en"):
 
     return response.success_message(
         translate_message("LIKED_USERS_FETCHED", lang),
-        data=[users]
+        data=users,
+        status_code=200
     )
 
 
