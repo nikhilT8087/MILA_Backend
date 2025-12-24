@@ -8,7 +8,8 @@ from config.db_config import subscription_plan_collection
 from core.utils.transaction_helper import get_transaction_details, validate_destination_wallet, \
     validate_transaction_status, build_transaction_model, handle_full_payment, mark_full_payment_received
 from schemas.transcation_schema import TransactionRequestModel, CompleteTransactionRequestModel
-from core.utils.core_enums import TransactionStatus
+from core.utils.core_enums import TransactionStatus, TransactionType
+
 response = CustomResponseMixin()
 from config.models.transaction_models import store_transaction_details, get_existing_transaction, get_subscription_payment_details, update_transaction_details
 from config.models.subscription_plan_models import get_subscription_plan
@@ -50,7 +51,12 @@ async def transaction_verify(request: TransactionRequestModel,user_id:str, lang:
 
         validate_transaction_status(transaction_details["status"], lang=lang)
 
-        transaction_data = await build_transaction_model(user_id, plan_data, transaction_details)
+        transaction_data = await build_transaction_model(
+            user_id=user_id,
+            plan_data=plan_data,
+            transaction_details=transaction_details,
+            trans_type=TransactionType.SUBSCRIPTION_TRANSACTION.value
+        )
 
         if transaction_data.status == TransactionStatus.PARTIAL.value:
             transaction_data.payment_details = [transaction_data.payment_details]
@@ -102,7 +108,13 @@ async def validate_remaining_transaction_payment(request: CompleteTransactionReq
 
         validate_transaction_status(transaction_details["status"], lang=lang)
 
-        transaction_data = await build_transaction_model(user_id, plan_data, transaction_details, partial_payment_data)
+        transaction_data = await build_transaction_model(
+            user_id=user_id,
+            plan_data=plan_data,
+            transaction_details=transaction_details,
+            partial_payment_data=partial_payment_data,
+            trans_type=TransactionType.SUBSCRIPTION_TRANSACTION.value
+        )
 
         if transaction_data.status == TransactionStatus.PARTIAL.value:
             doc = await update_transaction_details(transaction_data, request.subscription_id)
