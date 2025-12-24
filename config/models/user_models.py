@@ -47,6 +47,17 @@ class PyObjectId(str):
         json_schema["format"] = "objectId"
         return json_schema
 
+FREE_FILTERS = {
+    "cities": ("country", "$in"),
+    "genders": ("gender", "$in"),
+}
+
+PREMIUM_FILTERS = {
+    "status": ("marital_status", "$in"),
+    "orientations": ("sexual_orientation", "$in"),
+    "age": ("birthdate", "range"),
+}
+
 # User Role Enum for validation
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -62,6 +73,7 @@ class FileType(str, Enum):
     SELFIE = "selfie"
     PUBLIC_GALLERY = "public_gallery"
     PRIVATE_GALLERY = "private_gallery"
+    GIFT = "gift"
 
 # ---- Files model ----
 class Files(BaseModel):
