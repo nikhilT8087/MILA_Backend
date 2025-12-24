@@ -56,16 +56,17 @@ class AdminPermission:
 
 #class for UserPermission    
 class UserPermission:
-    def __init__(self, allowed_roles):
+    def __init__(self, allowed_roles, require_verified: bool = False):
         self.allowed_roles = allowed_roles
         self.http_bearer = HTTPBearer()
+        self.require_verified = require_verified
 
     async def __call__(self, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
         
         if credentials is None:        
             return response.raise_exception(
                     message="No token provided. Authentication required.",
-                    data={},
+                    data=None,
                     status_code=403
                 )
 
@@ -87,16 +88,22 @@ class UserPermission:
             if user_role not in self.allowed_roles:
                 return response.raise_exception(
                     message="You dont have enough permissions to perform this action",
-                    data={},
+                    data=None,
                     status_code=403
                 )
 
+            if self.require_verified and not user.get("is_verified", False):
+                return response.raise_exception(
+                    message="Your account is not verified",
+                    data=None,
+                    status_code=403
+                )
             return user
 
         except JWTError:
             return response.raise_exception(
-                    message="Acces Token Expired,please login",
-                    data={},
+                    message="Access Token Expired,please login",
+                    data=None,
                     status_code=403
                 )
  

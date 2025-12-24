@@ -27,7 +27,7 @@ class TokenRoutes:
         return await get_user_token_details(user_id=user_id, lang=lang, pagination=pagination)
 
     @api_router.post("/verify-token-purchase")
-    async def validate_token_purchase(request: TokenTransactionRequestModel,current_user: dict = Depends(UserPermission(allowed_roles=["user"])), lang: str = Query(None)):
+    async def validate_token_purchase(request: TokenTransactionRequestModel,current_user: dict = Depends(UserPermission(allowed_roles=["user"], require_verified=True)), lang: str = Query(None)):
         """
             Validates a token purchase transaction for the authenticated user.
 
@@ -49,7 +49,7 @@ class TokenRoutes:
 
 
     @api_router.post("/complete-token-purchase")
-    async def complete_token_purchase(request: CompleteTokenTransactionRequestModel, current_user:dict = Depends(UserPermission(allowed_roles=["user"])), lang: str = Query(None)):
+    async def complete_token_purchase(request: CompleteTokenTransactionRequestModel, current_user:dict = Depends(UserPermission(allowed_roles=["user"], require_verified=True)), lang: str = Query(None)):
         """
             Verifies and completes the remaining payment for a token purchase.
 

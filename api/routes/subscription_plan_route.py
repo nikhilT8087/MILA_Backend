@@ -20,7 +20,7 @@ class SubscriptionPlan:
         return await get_subscription_list(request, lang)
 
     @api_router.post("/verify_transaction", response_model=Response)
-    async def verify_transaction(request: TransactionRequestModel, current_user: dict = Depends(UserPermission(allowed_roles=["user","admin"])), lang: str = Query(None)):
+    async def verify_transaction(request: TransactionRequestModel, current_user: dict = Depends(UserPermission(allowed_roles=["user"], require_verified=True)), lang: str = Query(None)):
         """
             check transaction details associated with subscription plans
         """
@@ -29,7 +29,7 @@ class SubscriptionPlan:
         return await transaction_verify(request,user_id,lang)
 
     @api_router.post("/complete-payment", response_model=Response)
-    async def complete_payment(request: CompleteTransactionRequestModel, current_user:dict = Depends(UserPermission(allowed_roles=["user"])), lang: str = Query(None)):
+    async def complete_payment(request: CompleteTransactionRequestModel, current_user:dict = Depends(UserPermission(allowed_roles=["user"], require_verified=True)), lang: str = Query(None)):
         """
             verify remaining subscription plans amount transaction details
         """
