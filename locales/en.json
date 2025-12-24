@@ -176,8 +176,9 @@
   "Account_Verified": "Account Verification.",
 
   "ERROR_WHILE_FETCHING_TOKEN_DETAILS": "An error occurred while fetching the user token details.",
+  "TOKEN_PACKAGE_PLAN_NOT_FOUND": "The token package plan was not found.",
 
-  "-------------3-------------":"-------------3-------------",  
+  "-------------3-------------":"-------------3-------------",
   "PRICE_REQUIRED": "Price required",
   "PLEASE_SELECT_ONE_IMAGE_AT_A_TIME_WITH_ITS_PRICE": "Please select one image at a time with its price",
   "PRICE_MUST_BE_GREATER_THAN_ZERO": "Price must be greater than zero",
@@ -191,7 +192,7 @@
   "PUBLIC_GALLERY_FETCHED_SUCCESSFULLY": "Public gallery fetched successfully",
   "PRIVATE_GALLERY_FETCHED_SUCCESSFULLY": "Private gallery fetched successfully",
 
-  "-------------4-------------":"-------------4-------------",  
+  "-------------4-------------":"-------------4-------------",
   "PROFILE_NOT_FOUND": "Profile not found",
   "IMAGE_NOT_FOUND": "Image not found",
   "PRIVATE_IMAGE_FETCHED": "Private image fetched",
@@ -200,7 +201,7 @@
   "IMAGE_UNLOCKED_SUCCESSFULLY": "Image unlocked successfully",
   "GALLERY_FETCHED_SUCCESSFULLY": "Gallery fetched successfully",
 
-  "-------------5-------------":"-------------5-------------",  
+  "-------------5-------------":"-------------5-------------",
   "REFRESH_TOKEN_NOT_FOUND": "Refresh token not found",
   "REFRESH_TOKEN_BLACKLISTED": "The refresh token is blacklisted",
   "INVALID_REFRESH_TOKEN": "Invalid refresh token",

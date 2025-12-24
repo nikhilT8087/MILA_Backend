@@ -175,9 +175,9 @@
   "Account_Verified": "VÉRIFICATION DU COMPTE.",
 
   "ERROR_WHILE_FETCHING_TOKEN_DETAILS": "Une erreur est survenue lors de la récupération des informations du jeton utilisateur.",
+  "TOKEN_PACKAGE_PLAN_NOT_FOUND": "Le forfait de jetons est introuvable.",
 
-
-  "-------------3-------------":"-------------3-------------",  
+  "-------------3-------------":"-------------3-------------",
   "USER_NOT_FOUND": "Utilisateur non trouvé",
   "PROFILE_FETCHED_SUCCESSFULLY": "Profil récupéré avec succès",
 
@@ -194,7 +194,7 @@
   "PUBLIC_GALLERY_FETCHED_SUCCESSFULLY": "Galerie publique récupérée avec succès",
   "PRIVATE_GALLERY_FETCHED_SUCCESSFULLY": "Galerie privée récupérée avec succès",
 
-  "-------------4-------------":"-------------4-------------",  
+  "-------------4-------------":"-------------4-------------",
   "PROFILE_NOT_FOUND": "Profil non trouvé",
   "IMAGE_NOT_FOUND": "Image non trouvée",
   "PRIVATE_IMAGE_FETCHED": "Image privée récupérée",
