@@ -254,7 +254,7 @@
   "PASSWORD_RESET_SUCCESSFULLY": "Mot de passe réinitialisé avec succès. Veuillez vous connecter",
 
   "INVALID_USER_ID": "Identifiant utilisateur invalide",
-    "USER_FETCHED_SUCCESSFULLY": "Utilisateur récupéré avec succès",
+  "USER_FETCHED_SUCCESSFULLY": "Utilisateur récupéré avec succès",
   "USERS_FETCHED_SUCCESSFULLY": "Utilisateurs récupérés avec succès",
   "USER_ALREADY_LIKED": "Utilisateur déjà aimé",
   "USER_ADDED_TO_FAVORITES": "Utilisateur ajouté aux favoris",
@@ -282,11 +282,22 @@
   "ONBOARDING_NOT_FOUND": "Onboarding introuvable",
   "ERROR_WHILE_FETCHING_USER_PROFILE": "Erreur lors de la récupération du profil utilisateur",
   "USER_BASIC_PROFILE": "Profil utilisateur de base",
-   "ERROR_WHILE_UPLOADING_SELFIE": "Erreur lors du téléversement du selfie",
+  "ERROR_WHILE_UPLOADING_SELFIE": "Erreur lors du téléversement du selfie",
   "SELFIE_UPLOADED_SUCCESS": "Selfie téléversé avec succès",
   "ERROR_WHILE_UPLOADING_FILE": "Erreur lors du téléversement du fichier",
   "ERROR_WHILE_FETCHING_USER_DETAILS": "Erreur lors de la récupération des détails de l’utilisateur",
-    "ERROR_WHILE_FETCHING_HOME_SUGGESTIONS": "Erreur lors de la récupération des suggestions de la page d’accueil",
-  "USER_ALREADY_IN_FAVORITES": "L’utilisateur est déjà dans les favoris"
+  "ERROR_WHILE_FETCHING_HOME_SUGGESTIONS": "Erreur lors de la récupération des suggestions de la page d’accueil",
+  "USER_ALREADY_IN_FAVORITES": "L’utilisateur est déjà dans les favoris",
+  "SEXUAL_PREFERENCES_PREMIUM_ONLY": "Les préférences sexuelles sont réservées aux utilisateurs premium",
+  "DUPLICATE_IMAGE_IDS": "Identifiants d’images en double",
+  "MIN_IMAGES_REQUIRED": "Nombre minimum d’images requis",
+  "MAX_IMAGES_EXCEEDED": "Nombre maximum d’images dépassé",
+  "INVALID_IMAGE_ID": "Identifiant d’image invalide",
+  "INVALID_COUNTRY_ID": "Identifiant de pays invalide",
+  "COUNTRY_NOT_FOUND": "Pays introuvable",
+  "PREFERRED_COUNTRY_MUST_BE_LIST": "Le pays préféré doit être une liste",
+  "PREFERRED_COUNTRY_NOT_FOUND": "Pays préféré introuvable",
+  "ONBOARDING_SAVE_FAILED": "Échec de l’enregistrement de l’onboarding",
+  "ONBOARDING_SAVED": "Onboarding terminé avec succès"
 
 }
