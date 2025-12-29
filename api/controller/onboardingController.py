@@ -14,6 +14,7 @@ from config.db_config import (
     interest_categories_collection
 )
 from core.utils.response_mixin import CustomResponseMixin
+from core.utils.core_enums import MembershipType
 from core.utils.helper import serialize_datetime_fields
 from api.controller.files_controller import generate_file_url
 from core.utils.helper import convert_objectid_to_str
@@ -96,7 +97,8 @@ async def save_onboarding_step(
             status_code=401
         )
 
-    is_premium_user = user_doc.get("membership_type") == "premium"
+    membership_type = user_doc.get(MembershipType.FREE.value)
+    is_premium_user = membership_type == MembershipType.PREMIUM.value
 
     if not is_premium_user and "sexual_preferences" in payload:
         return response.raise_exception(
