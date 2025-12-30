@@ -97,7 +97,7 @@ async def save_onboarding_step(
             status_code=401
         )
 
-    membership_type = user_doc.get(MembershipType.FREE.value)
+    membership_type = user_doc.get("membership_type",MembershipType.FREE.value)
     is_premium_user = membership_type == MembershipType.PREMIUM.value
 
     if not is_premium_user and "sexual_preferences" in payload:
