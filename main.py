@@ -37,7 +37,8 @@ UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 
 PUBLIC_GALLERY_DIR = os.path.join(UPLOAD_DIR, "public_gallery")
 PRIVATE_GALLERY_DIR = os.path.join(UPLOAD_DIR, "private_gallery")
-PROFILE_PHOTO_DIR = os.path.join(UPLOAD_DIR, "profile_photos")
+PROFILE_PHOTO_DIR = os.path.join(UPLOAD_DIR, "profile_photo")
+SELFIE_DIR = os.path.join(UPLOAD_DIR, "selfie")
 GIFTS_DIR = os.path.join(UPLOAD_DIR, "gift")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -45,12 +46,13 @@ os.makedirs(PUBLIC_GALLERY_DIR, exist_ok=True)
 os.makedirs(PRIVATE_GALLERY_DIR, exist_ok=True)
 os.makedirs(PROFILE_PHOTO_DIR, exist_ok=True)
 os.makedirs(GIFTS_DIR, exist_ok=True)
+os.makedirs(SELFIE_DIR, exist_ok=True)
 
 app.mount("/public_gallery", StaticFiles(directory=PUBLIC_GALLERY_DIR))
 app.mount("/private_gallery", StaticFiles(directory=PRIVATE_GALLERY_DIR))
-app.mount("/profile_photos", StaticFiles(directory=PROFILE_PHOTO_DIR))
+app.mount("/profile_photo", StaticFiles(directory=PROFILE_PHOTO_DIR))
 app.mount("/gifts", StaticFiles(directory=GIFTS_DIR))
-
+app.mount("/selfie", StaticFiles(directory=SELFIE_DIR), name="selfie")
 
 # Health check endpoints
 @app.get("/health")
