@@ -248,7 +248,10 @@
 
   "INVALID_USER_ID": "Identifiant utilisateur invalide",
   "USER_FETCHED_SUCCESSFULLY": "Utilisateur récupéré avec succès",
-  "USERS_FETCHED_SUCCESSFULLY": "Utilisateurs récupérés avec succès"
+  "USERS_FETCHED_SUCCESSFULLY": "Utilisateurs récupérés avec succès",
 
-
+   "MINIMUM_WITHDRAWN_TOKENS_REQUIRED": "Un minimum de {required_tokens} jetons est requis pour effectuer un retrait.",
+   "INSUFFICIENT_AMOUNT": "Jetons insuffisants.",
+   "WITHDRAWAL_REQUEST_SUBMITTED": "Demande de retrait soumise avec succès.",
+   "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "Nous ne sommes pas en mesure de traiter votre demande de retrait pour le moment. Veuillez réessayer plus tard."
 }

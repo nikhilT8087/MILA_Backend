@@ -81,3 +81,16 @@ class CompleteTokenTransactionRequestModel(BaseModel):
         return v
 
 
+class WithdrawnTokenRequestModel(BaseModel):
+    amount: float
+    wallet_address: str = Field(
+        description="User Tron wallet address. "
+    )
+
+    @field_validator("amount", "wallet_address")
+    def not_empty(cls, value):
+        if not value or not value.strip():
+            raise ValueError("Field cannot be empty")
+        return value
+
+

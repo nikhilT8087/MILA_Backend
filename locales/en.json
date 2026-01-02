@@ -247,6 +247,11 @@
 
   "INVALID_USER_ID": "Invalid user ID",
   "USER_FETCHED_SUCCESSFULLY": "User fetched successfully",
-  "USERS_FETCHED_SUCCESSFULLY": "Users fetched successfully"
+  "USERS_FETCHED_SUCCESSFULLY": "Users fetched successfully",
+
+  "MINIMUM_WITHDRAWN_TOKENS_REQUIRED": "A minimum of {required_tokens} tokens is required for withdrawal.",
+  "INSUFFICIENT_AMOUNT": "Insufficient tokens.",
+  "WITHDRAWAL_REQUEST_SUBMITTED": "Withdrawal request submitted successfully.",
+  "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "We’re unable to process your withdrawal request right now. Please try again later."
 
 }
