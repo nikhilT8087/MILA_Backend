@@ -94,6 +94,9 @@ profile_view_history = db["profile_view_history"]
 blocked_users_collection = db["blocked_users_history"]
 reported_users_collection = db["reported_users_history"]
 withdraw_token_transaction_collection = db["withdraw_token_transaction"]
+notification_collection = db["notifications"]
+fcm_device_tokens_collection = db["fcm_device_tokens"]
+private_gallery_purchases_collection = db["private_gallery_purchases"]
 
 async def create_indexes():
     """
