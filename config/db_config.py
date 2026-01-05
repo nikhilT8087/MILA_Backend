@@ -93,6 +93,7 @@ gift_collection = db["gifts"]
 profile_view_history = db["profile_view_history"]
 blocked_users_collection = db["blocked_users_history"]
 reported_users_collection = db["reported_users_history"]
+withdraw_token_transaction_collection = db["withdraw_token_transaction"]
 
 async def create_indexes():
     """

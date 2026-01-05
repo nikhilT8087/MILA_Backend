@@ -256,7 +256,7 @@
 
   "INVALID_USER_ID": "Identifiant utilisateur invalide",
   "USER_FETCHED_SUCCESSFULLY": "Utilisateur récupéré avec succès",
-  "USERS_FETCHED_SUCCESSFULLY": "Utilisateurs récupérés avec succès",
+
   "USER_ALREADY_LIKED": "Utilisateur déjà aimé",
   "USER_ADDED_TO_FAVORITES": "Utilisateur ajouté aux favoris",
   "CANNOT_PASS_SELF": "Impossible de passer sur soi-même",
@@ -317,15 +317,11 @@
   "FAILED_TO_FETCH_BLOCKED_USERS": "Échec de la récupération des utilisateurs bloqués",
   "REPORTED_USERS_FETCHED": "Utilisateurs signalés récupérés",
   "FAILED_TO_FETCH_REPORTED_USERS": "Échec de la récupération des utilisateurs signalés",
+  "MINIMUM_WITHDRAWN_TOKENS_REQUIRED": "Un minimum de {required_tokens} jetons est requis pour effectuer un retrait.",
+  "INSUFFICIENT_AMOUNT": "Jetons insuffisants.",
+  "TOKEN_WITHDRAWAL_ALREADY_PENDING" : "Vous avez déjà une demande de retrait de jetons en attente. Veuillez patienter jusqu'à son traitement.",
+  "WITHDRAWAL_REQUEST_SUBMITTED": "Demande de retrait soumise avec succès.",
+  "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "Nous ne sommes pas en mesure de traiter votre demande de retrait pour le moment. Veuillez réessayer plus tard."
 
-  "-------------7-------------":"-------------7-------------",
-  "EDIT_PROFILE_DATA_FETCHED_SUCCESSFULLY": "Données du profil modifié récupérées avec succès",
-  "PROFILE_UPDATED_SUCCESSFULLY": "Profil mis à jour avec succès",
-  "ALREADY_VERIFIED": "Déjà vérifié",
-  "SELFIE_REQUIRED": "Selfie requis",
-  "SELFIE_SUBMITTED_FOR_VERIFICATION": "Selfie soumise pour vérification",
-  "NO_VERIFICATION_SELFIE_FOUND": "Aucun selfie de vérification trouvé",
-  "FILE_NOT_FOUND": "Fichier introuvable",
-  "VERIFICATION_SELFIE_FETCHED": "Selfie de vérification récupérée"
-  
+
 }

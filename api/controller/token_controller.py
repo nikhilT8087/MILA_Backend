@@ -5,14 +5,18 @@ from core.utils.exceptions import CustomValidationError
 from core.utils.pagination import StandardResultsSetPagination
 from config.models.user_token_history_model import get_user_token_history
 from config.models.token_packages_plan_model import get_token_packages_plans, get_token_packages_plan
+from schemas.transcation_schema import TokenWithdrawTransactionCreateModel
 from schemas.user_token_history_schema import TokenHistoryResponse, TokenTransactionRequestModel, \
-    CompleteTokenTransactionRequestModel
+    CompleteTokenTransactionRequestModel, WithdrawnTokenRequestModel
 from services.translation import translate_message
 from core.utils.helper import serialize_datetime_fields, convert_objectid_to_str
 from core.utils.transaction_helper import get_transaction_details, validate_destination_wallet, \
     validate_transaction_status, build_transaction_model, handle_full_payment, mark_full_payment_received, \
-    handle_token_full_payment, mark_token_full_payment_received
-from config.models.transaction_models import store_transaction_details, get_existing_transaction, get_subscription_payment_details, update_transaction_details
+    handle_token_full_payment, mark_token_full_payment_received, validate_withdrawal_tokens, \
+    calculate_tokens_based_on_amount
+from config.models.transaction_models import (store_transaction_details, get_existing_transaction,
+                                              get_subscription_payment_details, update_transaction_details,
+                                              store_withdrawn_token_request, ensure_no_pending_token_withdrawal)
 from config.models.user_models import get_user_details
 from core.utils.response_mixin import CustomResponseMixin
 response = CustomResponseMixin()
@@ -30,7 +34,7 @@ async def get_user_token_details(
         token_plans = convert_objectid_to_str(token_plans)
         data = TokenHistoryResponse(
             history=token_history,
-            available_tokens=available_tokens.get("tokens", "0"),
+            available_tokens=str(available_tokens.get("tokens", "0")),
             token_plans=token_plans
         ).model_dump()
         data = serialize_datetime_fields(data)
@@ -179,3 +183,51 @@ async def validate_remaining_token_payment(request: CompleteTokenTransactionRequ
             data=str(e),
             status_code=500
         )
+
+async def request_withdrawn_token_amount(request: WithdrawnTokenRequestModel, user_id:str, lang: str = "en"):
+
+    try:
+        await ensure_no_pending_token_withdrawal(user_id=user_id, lang=lang)
+
+        available_tokens = await get_user_details(condition={"_id": ObjectId(user_id)}, fields=["tokens"])
+        await validate_withdrawal_tokens(int(available_tokens.get("tokens", "0")), lang=lang)
+
+        withdrawn_token = await calculate_tokens_based_on_amount(request.amount)
+
+        if int(withdrawn_token) > int(available_tokens.get("tokens", "0")):
+            return response.error_message(
+                message=translate_message("INSUFFICIENT_AMOUNT", lang=lang),
+                data=[],
+                status_code=400
+            )
+        withdrawn_request_data = TokenWithdrawTransactionCreateModel(
+            user_id=str(ObjectId(user_id)),
+            request_amount=request.amount,
+            remaining_amount=request.amount,
+            status=TransactionStatus.PENDING.value,
+            tokens=withdrawn_token,
+            wallet_address=request.wallet_address,
+        )
+        doc = await store_withdrawn_token_request(doc=withdrawn_request_data)
+        doc = serialize_datetime_fields(doc)
+        doc = convert_objectid_to_str(doc)
+        return response.success_message(
+            translate_message("WITHDRAWAL_REQUEST_SUBMITTED", lang=lang),
+            data=doc
+        )
+    except CustomValidationError as error:
+        return response.error_message(
+            message=error.message,
+            data=error.data,
+            status_code=error.status_code
+        )
+    except Exception as e:
+        return response.raise_exception(
+            translate_message("WITHDRAWAL_REQUEST_PROCESSING_ERROR", lang=lang),
+            data=str(e),
+            status_code=500
+        )
+
+
+    
+
