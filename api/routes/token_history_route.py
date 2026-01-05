@@ -1,11 +1,11 @@
 from fastapi import APIRouter,Depends,Request,Query
 
 from core.utils.pagination import StandardResultsSetPagination, pagination_params
-from schemas.response_schema import Response
 from core.utils.permissions import UserPermission
 from api.controller.token_controller import get_user_token_details, verify_token_purchase, \
-    validate_remaining_token_payment
-from schemas.user_token_history_schema import TokenTransactionRequestModel, CompleteTokenTransactionRequestModel
+    validate_remaining_token_payment, request_withdrawn_token_amount
+from schemas.user_token_history_schema import (TokenTransactionRequestModel, CompleteTokenTransactionRequestModel,
+    WithdrawnTokenRequestModel)
 
 api_router = APIRouter()
 supported_langs = ["en", "fr"]
@@ -67,3 +67,21 @@ class TokenRoutes:
         user_id = str(current_user["_id"])
         lang = lang if lang in supported_langs else "en"
         return await validate_remaining_token_payment(request, user_id, lang)
+
+    @api_router.post("/withdraw-token-request")
+    async def withdraw_token_request(request: WithdrawnTokenRequestModel, current_user: dict = Depends(UserPermission(allowed_roles=["user"])), lang: str = Query(None)):
+        """
+            Submits a request to withdraw tokens for the authenticated user.
+
+            This endpoint validates the withdrawal request, ensures the user has
+            sufficient tokens, and initiates the token withdrawal process.
+            :param request: WithdrawnTokenRequestModel containing the withdrawal
+                    amount and related details.
+            :param current_user: Authenticated user details provided by the permission
+                                 dependency.
+            :param lang: Optional language code for localized responses.
+            :return: Response indicating the status of the token withdrawal request.
+        """
+        user_id = str(current_user["_id"])
+        lang = lang if lang in supported_langs else "en"
+        return await request_withdrawn_token_amount(request, user_id, lang)

@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from typing import Dict, Any, Optional, Tuple
 from core.utils.helper import get_membership_period
 from core.utils.response_mixin import CustomResponseMixin
@@ -16,6 +17,9 @@ from schemas.user_token_history_schema import CreateTokenHistory
 client = Tron(network=settings.WALLET_NETWORK)
 response = CustomResponseMixin()
 TRONGRID = "https://api.trongrid.io"
+
+MIN_WITHDRAWAL_USD = 25
+TOKEN_TO_USD_RATE = 0.05
 
 def hex20_to_base58(hex20: str) -> str:
     """Convert 20-byte hex (no 0x) to Tron base58 address (T...)."""
@@ -518,5 +522,43 @@ async def mark_token_full_payment_received(
 
     return doc
 
+async def validate_withdrawal_tokens(user_tokens: int, lang:str):
+    """
+        Validate whether token withdrawal is allowed based on minimum USD value.
+    """
+    usd_value = user_tokens * TOKEN_TO_USD_RATE
+    if usd_value < MIN_WITHDRAWAL_USD:
+        required_tokens = int(MIN_WITHDRAWAL_USD / TOKEN_TO_USD_RATE)
+        raise response.raise_exception(translate_message("MINIMUM_WITHDRAWN_TOKENS_REQUIRED",
+                                        lang=lang,
+                                        required_tokens=required_tokens),
+                                        data=[], status_code=400)
 
+async def calculate_tokens_based_on_amount(amount_usd:int | float | str) -> int:
+    """
+        Calculate the number of tokens based on USD amount.
 
+        Args:
+            amount_usd: Amount in USD
+
+        Returns:
+            Number of tokens (integer)
+
+        Raises:
+            ValueError: If amount is invalid or <= 0
+
+    """
+    try:
+        amount = Decimal(str(amount_usd))
+    except InvalidOperation:
+        raise ValueError("Invalid amount value")
+
+    if amount <= 0:
+        raise ValueError("Amount must be greater than zero")
+
+    tokens = (amount / Decimal(str(TOKEN_TO_USD_RATE))).quantize(
+        Decimal("1"),
+        rounding=ROUND_DOWN
+    )
+
+    return int(tokens)

@@ -314,5 +314,11 @@
   "BLOCKED_USERS_FETCHED":"Blocked users fetched successfully",
   "FAILED_TO_FETCH_BLOCKED_USERS":"Failed to fetch blocked users",
   "REPORTED_USERS_FETCHED":"Reported users fetched",
-  "FAILED_TO_FETCH_REPORTED_USERS":"Failed to fetch reported users"
+  "FAILED_TO_FETCH_REPORTED_USERS":"Failed to fetch reported users",
+
+  "MINIMUM_WITHDRAWN_TOKENS_REQUIRED": "A minimum of {required_tokens} tokens is required for withdrawal.",
+  "INSUFFICIENT_AMOUNT": "Insufficient tokens.",
+  "TOKEN_WITHDRAWAL_ALREADY_PENDING": "You already have a pending token withdrawal request. Please wait until it is processed.",
+  "WITHDRAWAL_REQUEST_SUBMITTED": "Withdrawal request submitted successfully.",
+  "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "We’re unable to process your withdrawal request right now. Please try again later."
 }
