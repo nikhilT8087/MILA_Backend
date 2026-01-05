@@ -16,6 +16,7 @@ class TransactionStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
     PARTIAL = "partial payment"
+    PENDING = "pending"
 
 class TokenTransactionReason(str, Enum):
     SUBSCRIPTION = "Purchased_Subscription_Plan"

@@ -534,7 +534,7 @@ async def validate_withdrawal_tokens(user_tokens: int, lang:str):
                                         required_tokens=required_tokens),
                                         data=[], status_code=400)
 
-async def calculate_tokens_based_on_amount(amount_usd:float) -> int:
+async def calculate_tokens_based_on_amount(amount_usd:int | float | str) -> int:
     """
         Calculate the number of tokens based on USD amount.
 
@@ -556,7 +556,7 @@ async def calculate_tokens_based_on_amount(amount_usd:float) -> int:
     if amount <= 0:
         raise ValueError("Amount must be greater than zero")
 
-    tokens = (amount / TOKEN_TO_USD_RATE).quantize(
+    tokens = (amount / Decimal(str(TOKEN_TO_USD_RATE))).quantize(
         Decimal("1"),
         rounding=ROUND_DOWN
     )

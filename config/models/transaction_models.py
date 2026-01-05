@@ -3,8 +3,9 @@ from typing import Optional, Dict, Any
 
 from pymongo import ReturnDocument
 
-from schemas.transcation_schema import TransactionCreateModel, TransactionUpdateModel
-from config.db_config import transaction_collection
+from core.utils.core_enums import TransactionStatus
+from schemas.transcation_schema import TransactionCreateModel, TransactionUpdateModel, TokenWithdrawTransactionCreateModel
+from config.db_config import transaction_collection, withdraw_token_transaction_collection
 from core.utils.helper import convert_objectid_to_str
 from services.translation import translate_message
 from core.utils.response_mixin import CustomResponseMixin
@@ -54,3 +55,31 @@ async def update_transaction_details(doc:TransactionUpdateModel, subscription_id
         return_document=ReturnDocument.AFTER
     )
     return res
+
+async def ensure_no_pending_token_withdrawal(user_id: str, lang:str) -> Optional[Dict[str, Any]]:
+    """
+    Ensure user does not already have a pending token withdrawal request.
+    """
+    transaction =  await withdraw_token_transaction_collection.find_one(
+        {
+            "user_id": ObjectId(user_id),
+            "status": TransactionStatus.PENDING
+        }
+    )
+    if transaction is not None:
+        raise response.raise_exception(
+            translate_message(
+                message="TOKEN_WITHDRAWAL_ALREADY_PENDING",
+                lang=lang
+            ),
+            data=[],
+            status_code=400
+        )
+    return None
+
+async def store_withdrawn_token_request(doc:TokenWithdrawTransactionCreateModel):
+    doc = doc.model_dump()
+    doc["user_id"] = ObjectId(doc["user_id"])
+    result = await withdraw_token_transaction_collection.insert_one(doc)
+    doc["_id"] = convert_objectid_to_str(result.inserted_id)
+    return doc

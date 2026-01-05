@@ -85,6 +85,7 @@ user_token_history_collection = db["user_token_history"]
 token_packages_plan_collection = db["token_packages_plan"]
 countries_collection = db["countries"]
 interest_categories_collection = db["interest_categories"]
+withdraw_token_transaction_collection = db["withdraw_token_transaction"]
 
 async def create_indexes():
     """

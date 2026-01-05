@@ -78,3 +78,17 @@ class TransactionUpdateModel(BaseModel):
     expires_at: Optional[datetime] = None
     tokens:Optional[int] = 0
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TokenWithdrawTransactionCreateModel(BaseModel):
+    user_id: str
+    request_amount: float = 0.0
+    paid_amount: float = 0.0
+    remaining_amount: float = 0.0
+    status: TransactionStatus
+    wallet_address:str = ""
+    platform_fee:float = 0.0
+    tron_fee:float = 0.0
+    payment_details: Union[PaymentDetailsModel, List[PaymentDetailsModel]] = []
+    tokens:Optional[int] = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

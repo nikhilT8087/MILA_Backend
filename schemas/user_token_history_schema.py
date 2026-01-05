@@ -82,15 +82,23 @@ class CompleteTokenTransactionRequestModel(BaseModel):
 
 
 class WithdrawnTokenRequestModel(BaseModel):
-    amount: float
+    amount: float = Field(
+        description="Withdrawal amount in USD. Must be greater than 0."
+    )
     wallet_address: str = Field(
         description="User Tron wallet address. "
     )
 
-    @field_validator("amount", "wallet_address")
-    def not_empty(cls, value):
-        if not value or not value.strip():
-            raise ValueError("Field cannot be empty")
+    @field_validator("amount")
+    def validate_amount(cls, value: float):
+        if value <= 0:
+            raise ValueError("Amount must be greater than 0")
         return value
+
+    @field_validator("wallet_address")
+    def validate_wallet_address(cls, value: str):
+        if not value or not value.strip():
+            raise ValueError("Wallet address cannot be empty")
+        return value.strip()
 
 
