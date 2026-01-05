@@ -7,7 +7,8 @@ from api.routes import (
     subscription_plan_route,google_auth_api,
     apple_auth_api , onboarding_route,adminauth_route,
     profile_api, token_history_route, profile_api_route ,
-    userPass_route, like_route_api, block_report_route, user_profile_view_api_route
+    userPass_route, like_route_api, block_report_route, user_profile_view_api_route,
+    fcm_route
 )
 
 from core.utils.exceptions import CustomValidationError, custom_validation_error_handler, validation_exception_handler
@@ -28,6 +29,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config.db_seeder.AdminSeeder import seed_admin
 from config.db_seeder.SubscriptionPlanSeeder import seed_subscription_plan
 
+from core.firebase import init_firebase
+
+init_firebase()
 
 from starlette.middleware.base import BaseHTTPMiddleware
 app = FastAPI()
@@ -219,6 +223,8 @@ app.include_router(userPass_route.router)
 app.include_router(like_route_api.router, prefix="/api/premium")
 app.include_router(user_profile_view_api_route.router, prefix="/api/edit")
 app.include_router(block_report_route.router)
+app.include_router(fcm_route.router, prefix="/api/fcm")
+
 # Scheduler Instance
 scheduler = BackgroundScheduler()
 

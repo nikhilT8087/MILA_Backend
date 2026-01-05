@@ -317,11 +317,31 @@
   "FAILED_TO_FETCH_BLOCKED_USERS": "Échec de la récupération des utilisateurs bloqués",
   "REPORTED_USERS_FETCHED": "Utilisateurs signalés récupérés",
   "FAILED_TO_FETCH_REPORTED_USERS": "Échec de la récupération des utilisateurs signalés",
-  "MINIMUM_WITHDRAWN_TOKENS_REQUIRED": "Un minimum de {required_tokens} jetons est requis pour effectuer un retrait.",
-  "INSUFFICIENT_AMOUNT": "Jetons insuffisants.",
-  "TOKEN_WITHDRAWAL_ALREADY_PENDING" : "Vous avez déjà une demande de retrait de jetons en attente. Veuillez patienter jusqu'à son traitement.",
-  "WITHDRAWAL_REQUEST_SUBMITTED": "Demande de retrait soumise avec succès.",
-  "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "Nous ne sommes pas en mesure de traiter votre demande de retrait pour le moment. Veuillez réessayer plus tard."
 
+  "-------------7-------------":"-------------7-------------",
+  "EDIT_PROFILE_DATA_FETCHED_SUCCESSFULLY": "Données du profil modifié récupérées avec succès",
+  "PROFILE_UPDATED_SUCCESSFULLY": "Profil mis à jour avec succès",
+  "ALREADY_VERIFIED": "Déjà vérifié",
+  "SELFIE_REQUIRED": "Selfie requis",
+  "SELFIE_SUBMITTED_FOR_VERIFICATION": "Selfie soumise pour vérification",
+  "NO_VERIFICATION_SELFIE_FOUND": "Aucun selfie de vérification trouvé",
+  "FILE_NOT_FOUND": "Fichier introuvable",
+  "VERIFICATION_SELFIE_FETCHED": "Selfie de vérification récupérée",
+  
+  "NOTIFICATION_FETCHED": "Notification récupérée",
+  "NOTIFICATION_NOT_FOUND": "Notification introuvable",
+  "NOTIFIATION_MARKED_AS_READ": "Notification marquée comme lue",
+  "ALL_NOTIFICATION_MARKED_AS_READ": "Toutes les notifications marquées comme lues",
+
+
+  "-------------8-------------":"-------------8-------------",
+
+  "FCM_TOKEN_REGISTERED": "Jeton FCM enregistré",
+  "FCM_TOKENS_FETCHED": "Jeton FCM récupéré",
+  "DEVICE_TOKEN_REQUIRED": "Jeton d'appareil requis",
+  "FCM_TOKEN_NOT_FOUND": "Jeton FCM introuvable",
+  "FCM_TOKEN_DEACTIVATED": "Jeton FCM désactivé",
+  "FCM_TOKEN_DELETED": "Jeton FCM supprimé"
+  
 
 }

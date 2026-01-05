@@ -1,8 +1,8 @@
 #services/profile_mapper.py
 
 from core.utils.age_calculation import calculate_age
-from core.utils.profile_constants import *
 from core.utils.core_enums import MembershipType
+from core.utils.helper import *
 
 def build_basic_profile_response(user: dict, onboarding: dict, profile_photo: str):
     birthdate = onboarding.get("birthdate") if onboarding else None
@@ -65,29 +65,34 @@ def build_edit_profile_response(user: dict, onboarding: dict):
         "basic_details": {
             "bio": onboarding.get("bio"),
             "country": onboarding.get("country"),
+
             "gender": build_selectable_options(
-                GENDER_OPTIONS,
+                enum_values(GenderEnum),
                 onboarding.get("gender")
             ),
+
             "sexual_orientation": build_selectable_options(
-                SEXUAL_ORIENTATION_OPTIONS,
+                enum_values(SexualOrientationEnum),
                 onboarding.get("sexual_orientation")
             ),
+
             "marital_status": build_selectable_options(
-                MARITAL_STATUS_OPTIONS,
+                enum_values(MaritalStatusEnum),
                 onboarding.get("marital_status")
             )
         },
 
         "interests": {
             "passions": build_selectable_options(
-                PASSION_OPTIONS,
+                onboarding.get("passions", []),   # passions are free-text / config-based
                 onboarding.get("passions", [])
             ),
+
             "interested_in": build_selectable_options(
-                INTERESTED_IN_OPTIONS,
+                enum_values(InterestedInEnum),
                 onboarding.get("interested_in", [])
             ),
+
             "preferred_country": onboarding.get("preferred_country", [])
         },
 
@@ -103,7 +108,7 @@ def build_edit_profile_response(user: dict, onboarding: dict):
 
     if is_premium:
         data["interests"]["sexual_preferences"] = build_selectable_options(
-            SEXUAL_PREFERENCE_OPTIONS,
+            enum_values(SexualPreferenceEnum),
             onboarding.get("sexual_preferences", [])
         )
 

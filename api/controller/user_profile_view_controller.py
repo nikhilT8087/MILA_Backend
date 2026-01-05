@@ -7,12 +7,14 @@ from services.profile_mapper import build_edit_profile_response
 from schemas.profile_edit_schema import *
 from core.utils.core_enums import *
 from config.db_config import *
-from datetime import datetime
-from core.utils.profile_constants import *
+from datetime import datetime, timezone
 from config.models.user_models import *
 from services.premium_guard import require_premium
 from api.controller.files_controller import get_profile_photo_url, generate_file_url, save_file
 from fastapi import UploadFile
+from bson import ObjectId
+from services.profile_fetch_service import *
+from config.models.onboarding_model import *
 
 response = CustomResponseMixin()
 
@@ -227,5 +229,89 @@ async def get_verification_selfie_controller(
     return response.success_message(
         translate_message("VERIFICATION_SELFIE_FETCHED", lang),
         data=[{"selfie_url": selfie_url}],
+        status_code=200
+    )
+
+async def get_notifications_controller(current_user,lang: str = "en"):
+
+    user_id = str(current_user["_id"])
+
+    notifications = await notification_collection.find(
+        {
+            "recipient_id": user_id,
+            "recipient_type": "user"
+        }
+    ).sort("created_at", -1).to_list(length=100)
+
+    today = []
+    earlier = []
+
+    today_date = datetime.now(timezone.utc).date()
+
+    for n in notifications:
+        created_at = n["created_at"]
+
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+
+        if created_at.date() == today_date:
+            today.append(format_notification(n))
+        else:
+            earlier.append(format_notification(n))
+
+    return response.success_message(
+        translate_message("NOTIFICATION_FETCHED", lang),
+        data=[{
+            "today": today,
+            "earlier": earlier
+        }],
+        status_code=200
+    )
+
+async def mark_notification_read(notification_id: str, current_user, lang: str = "en"):
+    user_id = str(current_user["_id"])
+
+    result = await notification_collection.update_one(
+        {
+            "_id": ObjectId(notification_id),
+            "recipient_id": user_id
+        },
+        {
+            "$set": {
+                "is_read": True,
+                "read_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+    if result.matched_count == 0:
+        return response.error_message(
+            translate_message("NOTIFICATION_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    return response.success_message(
+        translate_message("NOTIFIATION_MARKED_AS_READ", lang),
+        status_code=200
+    )
+
+async def mark_all_notifications_read(current_user, lang):
+    user_id = str(current_user["_id"])
+
+    await notification_collection.update_many(
+        {
+            "recipient_id": user_id,
+            "is_read": False
+        },
+        {
+            "$set": {
+                "is_read": True,
+                "read_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+    return response.success_message(
+        translate_message("ALL_NOTIFICATION_MARKED_AS_READ", lang),
         status_code=200
     )
