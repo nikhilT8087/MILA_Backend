@@ -360,6 +360,7 @@
   "APPROVED_VERIFICATION_COUNT_FETCHED": "Nombre de vérifications approuvées récupéré",
   "SOMEONE_VIEWED_YOUR_PROFILE": "Quelqu'un a consulté votre profil",
   "A_USER_JUST_VIEWED_YOUR_PROFILE": "Un utilisateur vient de consulter votre profil",
-  "ACCOUNT_DELETED_SUCCESSFULLY": "Compte supprimé avec succès"
+  "ACCOUNT_DELETED_SUCCESSFULLY": "Compte supprimé avec succès",
+  "USER_ID_REQUIRED": "L’identifiant de l’utilisateur est requis"
 
 }

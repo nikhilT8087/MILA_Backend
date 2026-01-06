@@ -1,8 +1,9 @@
 from datetime import datetime
+from bson import ObjectId
 from core.utils.response_mixin import CustomResponseMixin
 from core.utils.helper import serialize_datetime_fields
 from api.controller.onboardingController import fetch_user_by_id
-from config.db_config import blocked_users_collection , reported_users_collection
+from config.db_config import blocked_users_collection , reported_users_collection , user_collection
 from services.translation import translate_message
 
 response = CustomResponseMixin()
@@ -17,6 +18,31 @@ async def block_user_controller(
         return response.error_message(
             translate_message("CANNOT_BLOCK_SELF", lang),
             status_code=400,
+            data=[]
+        )
+    if not blocked_id or not blocked_id.strip():
+        return response.error_message(
+            translate_message("USER_ID_REQUIRED", lang),
+            status_code=400,
+            data=[]
+        )
+
+    if not ObjectId.is_valid(blocked_id):
+        return response.error_message(
+            translate_message("INVALID_USER_ID", lang),
+            status_code=400,
+            data=[]
+        )
+
+    blocked_user = await user_collection.find_one(
+        {"_id": ObjectId(blocked_id), "is_deleted": {"$ne": True}},
+        {"_id": 1}
+    )
+
+    if not blocked_user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404,
             data=[]
         )
 
@@ -61,7 +87,32 @@ async def report_user_controller(
             status_code=400,
             data=[]
         )
+    if not reported_id or not reported_id.strip():
+        return response.error_message(
+            translate_message("USER_ID_REQUIRED", lang),
+            status_code=400,
+            data=[]
+        )
 
+    if not ObjectId.is_valid(reported_id):
+        return response.error_message(
+            translate_message("INVALID_USER_ID", lang),
+            status_code=400,
+            data=[]
+        )
+    
+    user = await user_collection.find_one(
+        {"_id": ObjectId(reported_id), "is_deleted": {"$ne": True}},
+        {"_id": 1}
+    )
+
+    if not user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404,
+            data=[]
+        )
+    
     existing_report = await reported_users_collection.find_one({
         "reporter_id": reporter_id,
         "reported_id": reported_id
@@ -72,7 +123,8 @@ async def report_user_controller(
             translate_message("USER_ALREADY_REPORTED", lang),
             status_code=200,
             data=[{
-                "reported_user_id": reported_id
+                "reported_user_id": reported_id,
+                "reason":reason
             }]
         )
 
@@ -87,7 +139,8 @@ async def report_user_controller(
     return response.success_message(
         translate_message("USER_REPORTED_SUCCESSFULLY", lang),
         data=[{
-            "reported_user_id": reported_id
+            "reported_user_id": reported_id,
+            "reason":reason
         }],
         status_code=200
     )
