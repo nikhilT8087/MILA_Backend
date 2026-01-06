@@ -357,6 +357,9 @@
   "USER_VERIFICATION_APPROVED": "Vérification de l’utilisateur approuvée",
   "USER_ALREADY_APPROVED": "Utilisateur déjà approuvé",
   "USER_VERIFICATION_REJECTED": "Vérification de l’utilisateur rejetée",
-  "APPROVED_VERIFICATION_COUNT_FETCHED": "Nombre de vérifications approuvées récupéré"
+  "APPROVED_VERIFICATION_COUNT_FETCHED": "Nombre de vérifications approuvées récupéré",
+  "SOMEONE_VIEWED_YOUR_PROFILE": "Quelqu'un a consulté votre profil",
+  "A_USER_JUST_VIEWED_YOUR_PROFILE": "Un utilisateur vient de consulter votre profil",
+  "ACCOUNT_DELETED_SUCCESSFULLY": "Compte supprimé avec succès"
 
 }
