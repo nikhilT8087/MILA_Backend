@@ -40,9 +40,9 @@ async def get_verification_queue(
             {"$unwind": "$user"},
         ]
 
-        if status == "pending":
+        if status == VerificationStatusEnum.PENDING:
             pipeline.append({"$match": {"user.is_verified": False}})
-        elif status == "approved":
+        elif status == VerificationStatusEnum.APPROVED:
             pipeline.append({"$match": {"user.is_verified": True}})
 
         pipeline.append({
@@ -57,8 +57,8 @@ async def get_verification_queue(
                 "verification_status": {
                     "$cond": {
                         "if": {"$eq": ["$user.is_verified", True]},
-                        "then": "approved",
-                        "else": "pending"
+                        "then": VerificationStatusEnum.APPROVED,
+                        "else": VerificationStatusEnum.PENDING
                     }
                 },
 
@@ -148,7 +148,7 @@ async def approve_verification(user_id: str, admin: dict , lang: str = "en"):
     await verification_collection.insert_one({
         "user_id": user_id,
         "verified_by_admin_id": str(admin["_id"]),
-        "status": "approved",
+        "status":VerificationStatusEnum.APPROVED,
         "verified_at": datetime.utcnow(),
 
     })
@@ -158,7 +158,7 @@ async def approve_verification(user_id: str, admin: dict , lang: str = "en"):
         data=[{
             "user_id": user_id,
             "verified_by": str(admin["_id"]),
-            "status": "approved"
+            "status":VerificationStatusEnum.APPROVED
         }]
     )
 
@@ -174,7 +174,7 @@ async def reject_verification(user_id: str, admin , lang: str = "en"):
     
     approved_verification = await verification_collection.find_one({
         "user_id": user_id,
-        "status": "approved"
+        "status":VerificationStatusEnum.APPROVED
     })
 
     if approved_verification:
@@ -187,7 +187,7 @@ async def reject_verification(user_id: str, admin , lang: str = "en"):
     await verification_collection.insert_one({
         "user_id": user_id,
         "verified_by_admin_id": str(admin["_id"]),
-        "status": "rejected",
+        "status":VerificationStatusEnum.REJECTED,
         "verified_at": datetime.utcnow(),
         })
     
@@ -196,7 +196,7 @@ async def reject_verification(user_id: str, admin , lang: str = "en"):
         data=[{
         "user_id": user_id,
         "verified_by": str(admin["_id"]),
-        "status": "rejected"
+        "status":VerificationStatusEnum.REJECTED
         }]
         )
 
