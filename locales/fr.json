@@ -361,6 +361,7 @@
   "SOMEONE_VIEWED_YOUR_PROFILE": "Quelqu'un a consulté votre profil",
   "A_USER_JUST_VIEWED_YOUR_PROFILE": "Un utilisateur vient de consulter votre profil",
   "ACCOUNT_DELETED_SUCCESSFULLY": "Compte supprimé avec succès",
-  "USER_ID_REQUIRED": "L’identifiant de l’utilisateur est requis"
+  "USER_ID_REQUIRED": "L’identifiant de l’utilisateur est requis",
+  "PLEASE_ENTER_VALID_REPORT_REASON": "Veuillez saisir une raison de signalement valide"
 
 }

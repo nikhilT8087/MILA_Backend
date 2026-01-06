@@ -1,5 +1,6 @@
 from datetime import datetime
 from bson import ObjectId
+import re
 from core.utils.response_mixin import CustomResponseMixin
 from core.utils.helper import serialize_datetime_fields
 from api.controller.onboardingController import fetch_user_by_id
@@ -87,6 +88,7 @@ async def report_user_controller(
             status_code=400,
             data=[]
         )
+
     if not reported_id or not reported_id.strip():
         return response.error_message(
             translate_message("USER_ID_REQUIRED", lang),
@@ -100,7 +102,7 @@ async def report_user_controller(
             status_code=400,
             data=[]
         )
-    
+
     user = await user_collection.find_one(
         {"_id": ObjectId(reported_id), "is_deleted": {"$ne": True}},
         {"_id": 1}
@@ -112,7 +114,15 @@ async def report_user_controller(
             status_code=404,
             data=[]
         )
-    
+
+    reason = reason.strip()
+    if not re.search(r"[A-Za-z]{3,}", reason):
+        return response.error_message(
+            translate_message("PLEASE_ENTER_VALID_REPORT_REASON", lang),
+            status_code=400,
+            data=[]
+        )
+
     existing_report = await reported_users_collection.find_one({
         "reporter_id": reporter_id,
         "reported_id": reported_id
@@ -124,7 +134,7 @@ async def report_user_controller(
             status_code=200,
             data=[{
                 "reported_user_id": reported_id,
-                "reason":reason
+                "reason": reason
             }]
         )
 
@@ -140,7 +150,7 @@ async def report_user_controller(
         translate_message("USER_REPORTED_SUCCESSFULLY", lang),
         data=[{
             "reported_user_id": reported_id,
-            "reason":reason
+            "reason": reason
         }],
         status_code=200
     )
