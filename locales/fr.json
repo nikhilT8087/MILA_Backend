@@ -322,5 +322,6 @@
    "INSUFFICIENT_AMOUNT": "Jetons insuffisants.",
    "TOKEN_WITHDRAWAL_ALREADY_PENDING" : "Vous avez déjà une demande de retrait de jetons en attente. Veuillez patienter jusqu'à son traitement.",
    "WITHDRAWAL_REQUEST_SUBMITTED": "Demande de retrait soumise avec succès.",
-   "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "Nous ne sommes pas en mesure de traiter votre demande de retrait pour le moment. Veuillez réessayer plus tard."
+   "WITHDRAWAL_REQUEST_PROCESSING_ERROR" : "Nous ne sommes pas en mesure de traiter votre demande de retrait pour le moment. Veuillez réessayer plus tard.",
+  "WITHDRAW_TRANSACTIONS_FETCHED": "Opérations de retrait récupérées avec succès."
 }

@@ -177,3 +177,16 @@ async def finalize_login_response(user: dict, lang: str):
         }],
         status_code=200
     )
+
+def convert_datetime_to_date(obj, date_format="%Y-%m-%d"):
+    """
+     Recursively convert datetime objects to formatted date string.
+    """
+    if isinstance(obj, datetime):
+        return obj.strftime(date_format)
+    elif isinstance(obj, dict):
+        return {k: convert_datetime_to_date(v, date_format) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_datetime_to_date(item, date_format) for item in obj]
+    else:
+        return obj
