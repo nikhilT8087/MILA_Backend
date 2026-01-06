@@ -1,9 +1,8 @@
 from datetime import datetime
 from bson import ObjectId
-from fastapi import HTTPException
 from config.db_config import db
-from bson.errors import InvalidId
 from schemas.verification_schema import VerificationStatusEnum
+from core.utils.pagination import StandardResultsSetPagination
 from api.controller.files_controller import generate_file_url
 from core.utils.response_mixin import CustomResponseMixin
 from config.db_config import verification_collection , user_collection
@@ -13,7 +12,9 @@ response = CustomResponseMixin()
 
 async def get_verification_queue(
     status: str,
-    lang: str = "en"
+    lang: str = "en",
+    search: str | None = None,
+    pagination: StandardResultsSetPagination = None
 ):
     try:
         pipeline = [
@@ -38,7 +39,16 @@ async def get_verification_queue(
                 }
             },
             {"$unwind": "$user"},
-
+            *(
+                [{
+                    "$match": {
+                        "user.username": {
+                            "$regex": search,
+                            "$options": "i"
+                        }
+                    }
+                }] if search else []
+            ),
             {
                 "$lookup": {
                     "from": "verification",
@@ -78,6 +88,14 @@ async def get_verification_queue(
         elif status == VerificationStatusEnum.APPROVED:
             pipeline.append({"$match": {"user.is_verified": True}})
 
+        #  Pagination
+        pipeline.extend([
+            {"$sort": {"created_at": -1}},
+            {"$skip": pagination.skip},
+            {"$limit": pagination.limit}
+        ])
+
+        #  Final projection
         pipeline.append({
             "$project": {
                 "_id": 0,
