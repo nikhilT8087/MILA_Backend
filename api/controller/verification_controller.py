@@ -38,8 +38,41 @@ async def get_verification_queue(
                 }
             },
             {"$unwind": "$user"},
+
+            {
+                "$lookup": {
+                    "from": "verification",
+                    "let": {"uid": "$user_id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {"$eq": ["$user_id", "$$uid"]}
+                            }
+                        },
+                        {"$sort": {"verified_at": -1}},
+                        {"$limit": 1}
+                    ],
+                    "as": "verification"
+                }
+            },
+            {
+                "$addFields": {
+                    "latest_verification_status": {
+                        "$arrayElemAt": ["$verification.status", 0]
+                    }
+                }
+            },
+            {
+                "$match": {
+                    "$or": [
+                        {"latest_verification_status": {"$exists": False}},
+                        {"latest_verification_status": {"$ne": VerificationStatusEnum.REJECTED}}
+                    ]
+                }
+            }
         ]
 
+        #  Status-based filtering
         if status == VerificationStatusEnum.PENDING:
             pipeline.append({"$match": {"user.is_verified": False}})
         elif status == VerificationStatusEnum.APPROVED:
@@ -110,7 +143,7 @@ async def get_verification_queue(
             status_code=200
         )
 
-    except Exception:
+    except Exception as e:
         return response.error_message(
             translate_message("FAILED_TO_FETCH_VERIFICATION_QUEUE", lang),
             data=[],
