@@ -1,23 +1,10 @@
-from bson import ObjectId
 from typing import Optional
-from datetime import datetime , timedelta
-from config.db_config import (user_collection ,
-                            onboarding_collection , 
-                            file_collection ,
-                            countries_collection , 
-                            verification_collection , 
-                            user_match_history ,
-                            user_suspension_collection ,
-                            admin_blocked_users_collection,
-                            deleted_account_collection)
-
-from api.controller.files_controller import generate_file_url
-from core.utils.helper import serialize_datetime_fields
-from api.controller.files_controller import generate_file_url
+from datetime import datetime
 from core.utils.response_mixin import CustomResponseMixin
 from core.utils.pagination import StandardResultsSetPagination
 from services.translation import translate_message
-from core.utils.core_enums import VerificationStatusEnum
+from config.models.user_management_model import UserManagementModel
+from core.utils.helper import serialize_datetime_fields
 
 response = CustomResponseMixin()
 
@@ -35,178 +22,18 @@ async def get_admin_users(
     pagination: StandardResultsSetPagination = None
 ):
     try:
-        pipeline = []
+        users = await UserManagementModel.get_admin_users_pipeline(
+            status, search, gender, country,
+            verification, membership, date_from, date_to, pagination
+        )
 
-        user_match = {
-            "is_deleted": {"$ne": True}
-        }
-
-        if status:
-            user_match["login_status"] = status
-
-        if membership:
-            user_match["membership_type"] = membership
-
-        if date_from or date_to:
-            user_match["created_at"] = {}
-            if date_from:
-                user_match["created_at"]["$gte"] = date_from
-            if date_to:
-                user_match["created_at"]["$lte"] = date_to
-
-        pipeline.append({"$match": user_match})
-
-        pipeline.append({
-            "$addFields": {
-                "userIdStr": {"$toString": "$_id"}
-            }
-        })
-
-        pipeline.extend([
-            {
-                "$lookup": {
-                    "from": "user_onboarding",
-                    "localField": "userIdStr",
-                    "foreignField": "user_id",
-                    "as": "onboarding"
-                }
-            },
-            {"$unwind": "$onboarding"}
-        ])
-
-        if search:
-            pipeline.append({
-                "$match": {
-                    "username": {"$regex": search, "$options": "i"}
-                }
-            })
-
-        if gender:
-            pipeline.append({"$match": {"onboarding.gender": gender}})
-
-        if country:
-            pipeline.append({"$match": {"onboarding.country": country}})
-
-        pipeline.append({
-            "$lookup": {
-                "from": "verification_history",
-                "let": {"uid": "$userIdStr"},
-                "pipeline": [
-                    {
-                        "$match": {
-                            "$expr": {"$eq": ["$user_id", "$$uid"]}
-                        }
-                    },
-                    {"$sort": {"verified_at": -1}},
-                    {"$limit": 1}
-                ],
-                "as": "verification"
-            }
-        })
-
-        pipeline.append({
-            "$addFields": {
-                "verification_status": {
-                    "$cond": {
-                        "if": {"$gt": [{"$size": "$verification"}, 0]},
-                        "then": {"$arrayElemAt": ["$verification.status", 0]},
-                        "else": VerificationStatusEnum.PENDING
-                    }
-                }
-            }
-        })
-
-        if verification:
-            pipeline.append({
-                "$match": {"verification_status": verification}
-            })
-
-        pipeline.append({
-            "$lookup": {
-                "from": "users_matched_history",
-                "let": {"uid": "$userIdStr"},
-                "pipeline": [
-                    {
-                        "$match": {
-                            "$expr": {"$in": ["$$uid", "$user_ids"]}
-                        }
-                    }
-                ],
-                "as": "matches"
-            }
-        })
-
-        pipeline.append({
-            "$addFields": {
-                "match_count": {"$size": "$matches"}
-            }
-        })
-
-        pipeline.append({
-            "$addFields": {
-                "countryObjId": {
-                    "$toObjectId": "$onboarding.country"
-                }
-            }
-        })
-
-        pipeline.append({
-            "$lookup": {
-                "from": "countries",
-                "localField": "countryObjId",
-                "foreignField": "_id",
-                "as": "country"
-            }
-        })
-
-        pipeline.append({
-            "$unwind": {
-                "path": "$country",
-                "preserveNullAndEmptyArrays": True
-            }
-        })
-
-        pipeline.extend([
-            {"$sort": {"created_at": -1}},
-            {"$skip": pagination.skip},
-            {"$limit": pagination.limit}
-        ])
-
-        pipeline.append({
-            "$project": {
-                "_id": 0,
-                "user_id": {"$toString": "$_id"},
-
-                "username": 1,
-                "email": 1,
-                "membership_type": 1,
-                "login_status": 1,
-
-                "verification_status": 1,
-                "match_count": 1,
-
-                "gender": "$onboarding.gender",
-                "sexual_orientation": "$onboarding.sexual_orientation",
-                "relationship _status": "$onboarding.marital_status",
-
-                "country": {
-                    "id": {"$toString": "$country._id"},
-                    "name": "$country.name"
-                },
-
-                "registration_date": "$created_at"
-            }
-        })
-
-        results = await user_collection.aggregate(pipeline).to_list(None)
-
-        for user in results:
-            if user.get("registration_date"):
-                user["registration_date"] = user["registration_date"].isoformat()
+        for u in users:
+            if u.get("registration_date"):
+                u["registration_date"] = u["registration_date"].isoformat()
 
         return response.success_message(
             translate_message("USERS_FETCHED_SUCCESSFULLY", lang),
-            data=results,
+            data=users,
             status_code=200
         )
 
@@ -220,12 +47,8 @@ async def get_admin_users(
 # Get complete user details (View)
 async def get_admin_user_details(user_id: str, lang: str = "en"):
     try:
-        # Fetch user
-        user = await user_collection.find_one(
-            {"_id": ObjectId(user_id), "is_deleted": {"$ne": True}},
-            {"password": 0}
-        )
-
+        # ---------------- USER ----------------
+        user = await UserManagementModel.get_user(user_id)
         if not user:
             return response.error_message(
                 translate_message("USER_NOT_FOUND", lang),
@@ -233,90 +56,27 @@ async def get_admin_user_details(user_id: str, lang: str = "en"):
                 status_code=404
             )
 
-        # Fetch onboarding
-        onboarding = await onboarding_collection.find_one(
-            {"user_id": user_id},
-            {"_id": 0}
+        # ---------------- ONBOARDING ----------------
+        onboarding = await UserManagementModel.get_onboarding(user_id)
+
+        # ---------------- COUNTRY ----------------
+        country = (
+            await UserManagementModel.get_country(onboarding["country"])
+            if onboarding and onboarding.get("country") else None
         )
 
+        # ---------------- VERIFICATION ----------------
+        verification_status = await UserManagementModel.get_latest_verification_status(user_id)
 
-        # Fetch country
-        country_data = None
-        if onboarding and onboarding.get("country"):
-            country = await countries_collection.find_one(
-                {"_id": ObjectId(onboarding["country"])},
-                {"name": 1}
-            )
-            if country:
-                country_data = {
-                    "id": str(country["_id"]),
-                    "name": country["name"]
-                }
+        # ---------------- MATCHES ----------------
+        match_count, matched_users = await UserManagementModel.get_matches(user_id)
 
-
-        # Fetch verification (latest)
-        verification = await verification_collection.find(
-            {"user_id": user_id}
-        ).sort("verified_at", -1).limit(1).to_list(1)
-
-        verification_status = (
-            verification[0]["status"]
-            if verification else VerificationStatusEnum.PENDING
+        # ---------------- PHOTOS ----------------
+        photos, profile_photo = await UserManagementModel.get_user_photos(
+            onboarding.get("images") if onboarding else []
         )
 
-
-        # Fetch matches + usernames
-        matches_cursor = user_match_history.find(
-            {"user_ids": user_id}
-        )
-
-        matched_user_ids = set()
-        async for match in matches_cursor:
-            for uid in match.get("user_ids", []):
-                if uid != user_id:
-                    matched_user_ids.add(uid)
-
-        match_count = len(matched_user_ids)
-
-        matched_users = []
-        if matched_user_ids:
-            users_cursor = user_collection.find(
-                {
-                    "_id": {"$in": [ObjectId(uid) for uid in matched_user_ids]},
-                    "is_deleted": {"$ne": True}
-                },
-                {"username": 1}
-            )
-
-            async for u in users_cursor:
-                matched_users.append({
-                    "user_id": str(u["_id"]),
-                    "username": u.get("username")
-                })
-
-
-        # Fetch photos
-        photos = []
-        if onboarding and onboarding.get("images"):
-            files = await file_collection.find(
-                {"_id": {"$in": [ObjectId(i) for i in onboarding["images"]]}}
-            ).to_list(None)
-
-            for f in files:
-                url = await generate_file_url(
-                    f["storage_key"], f.get("storage_backend")
-                )
-                photos.append({
-                    "id": str(f["_id"]),
-                    "url": url
-                })
-
-
-        # Profile photo (first image)
-        profile_photo = photos[0] if photos else None
-
-
-        # Standardized response
+        # ---------------- RESPONSE ----------------
         result = {
             "user_id": user_id,
 
@@ -329,15 +89,17 @@ async def get_admin_user_details(user_id: str, lang: str = "en"):
             "membership_type": user.get("membership_type"),
 
             "gender": onboarding.get("gender") if onboarding else None,
-            "country": country_data,
-            "relationship_status": onboarding.get("marital_status") if onboarding else None,
             "sexual_orientation": onboarding.get("sexual_orientation") if onboarding else None,
+            "relationship_status": onboarding.get("marital_status") if onboarding else None,
+            "city": onboarding.get("city") if onboarding else None,
+
+            "country": country,
             "registration_date": user.get("created_at"),
 
             "bio": onboarding.get("bio") if onboarding else None,
-            "passions": onboarding.get("passions") if onboarding else None,
-            "photos": photos,
+            "interests": onboarding.get("passions") if onboarding else None,
 
+            "photos": photos,
             "match_count": match_count,
             "matched_users": matched_users
         }
@@ -355,7 +117,6 @@ async def get_admin_user_details(user_id: str, lang: str = "en"):
             status_code=500
         )
 
-#Suspend user
 async def admin_suspend_user(
     user_id: str,
     days: int,
@@ -363,43 +124,22 @@ async def admin_suspend_user(
     lang: str = "en"
 ):
     try:
-        user = await user_collection.find_one(
-            {"_id": ObjectId(user_id), "is_deleted": {"$ne": True}}
+        result = await UserManagementModel.suspend_user(
+            user_id=user_id,
+            admin_id=admin_id,
+            days=days,
+            lang=lang
         )
 
-        if not user:
+        #  Handle validation errors from model
+        if result.get("error"):
             return response.error_message(
-                translate_message("USER_NOT_FOUND", lang),
+                message=result["message"],
                 data=[],
-                status_code=404
-            )
-        
-        check_already = await user_suspension_collection.find_one(
-            {
-                "user_id": user_id,
-                "suspended_until": {"$gt": datetime.utcnow()}
-            }
-        )
-
-        if check_already:
-            return response.error_message(
-                translate_message("USER_ALREADY_SUSPENDED",lang),
-                data=[],
-                status_code=400
+                status_code=result["status_code"]
             )
 
-        suspended_from = datetime.utcnow()
-        suspended_until = suspended_from + timedelta(days=days)
-
-        # Store suspension history
-        await user_suspension_collection.insert_one({
-            "user_id": user_id,
-            "suspended_by": admin_id,
-            "suspended_from": suspended_from,
-            "suspended_until": suspended_until,
-            "created_at": suspended_from,
-            "updated_at": suspended_from
-        })
+        suspended_until = result["data"]["suspended_until"]
 
         return response.success_message(
             translate_message("USER_SUSPENDED_SUCCESSFULLY", lang),
@@ -417,52 +157,25 @@ async def admin_suspend_user(
             status_code=500
         )
 
-#Block user
 async def admin_block_user(
     user_id: str,
     admin_id: str,
     lang: str = "en"
 ):
     try:
-        
-        # Check user exists
-        
-        user = await user_collection.find_one(
-            {"_id": ObjectId(user_id), "is_deleted": {"$ne": True}}
+        result = await UserManagementModel.block_user(
+            user_id=user_id,
+            admin_id=admin_id,
+            lang=lang
         )
 
-        if not user:
+        #  Handle validation errors
+        if result.get("error"):
             return response.error_message(
-                translate_message("USER_NOT_FOUND", lang),
+                message=result["message"],
                 data=[],
-                status_code=404
+                status_code=result["status_code"]
             )
-
-        
-        # Check already blocked
-        
-        already_blocked = await admin_blocked_users_collection.find_one({
-            "user_id": user_id,
-        })
-
-        if already_blocked:
-            return response.error_message(
-                translate_message("USER_ALREADY_BLOCKED", lang),
-                data=[],
-                status_code=400
-            )
-
-        now = datetime.utcnow()
-
-        
-        # Block user (PERMANENT)
-        
-        await admin_blocked_users_collection.insert_one({
-            "user_id": user_id,
-            "blocked_by": admin_id,
-            "created_at": now,
-            "updated_at": now
-        })
 
         return response.success_message(
             translate_message("USER_BLOCKED_SUCCESSFULLY", lang),
@@ -480,45 +193,27 @@ async def admin_block_user(
             status_code=500
         )
 
-# Delete user account
+
+
 async def admin_delete_user(
     user_id: str,
     admin_id: str,
     lang: str = "en"
 ):
     try:
-        user = await user_collection.find_one(
-            {"_id": ObjectId(user_id), "is_deleted": {"$ne": True}}
+        result = await UserManagementModel.delete_user(
+            user_id=user_id,
+            admin_id=admin_id,
+            lang=lang
         )
 
-        if not user:
+        #  Validation errors from model
+        if result.get("error"):
             return response.error_message(
-                translate_message("USER_NOT_FOUND", lang),
+                message=result["message"],
                 data=[],
-                status_code=404
+                status_code=result["status_code"]
             )
-
-        email = user.get("email")
-
-        already_delted = await deleted_account_collection.find_one(
-            {"user_id": user_id,}
-        )
-        if already_delted:
-            return response.error_message(
-                translate_message("ACCOUNT_ALREADY_DELETED",lang),
-                data=[],
-                status_code=400
-            )
-        # Store deletion audit record
-        
-        await deleted_account_collection.insert_one({
-            "user_id": user_id,
-            "email": email,
-            "deleted_by": admin_id,
-            "created_at": datetime.now(),
-            "updated_at":datetime.now()
-        })
-
 
         return response.success_message(
             translate_message("ACCOUNT_DELETED_SUCCESSFULLY", lang),

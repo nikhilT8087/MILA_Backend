@@ -370,6 +370,8 @@
   "ACCOUNT_DELETED_SUCCESSFULLY":"Account deleted successfully",
   "FAILED_TO_DELETE_ACCOUNT":"Failed to delete account",
   "FAILED_TO_BLOCK_USER":"Failed to block user",
-  "FAILED_TO_FETCH_USERS":"Failed to fetch users"
+  "FAILED_TO_FETCH_USERS":"Failed to fetch users",
+  "ACCOUNT_SUSPENDED":"Account suspended",
+  "ACCOUNT_BLOCKED":"Account blocked"
 
 }

@@ -377,7 +377,9 @@
   "ACCOUNT_ALREADY_DELETED": "Compte déjà supprimé",
   "FAILED_TO_DELETE_ACCOUNT": "Échec de la suppression du compte",
   "FAILED_TO_BLOCK_USER": "Échec du blocage de l’utilisateur",
-  "FAILED_TO_FETCH_USERS": "Échec de la récupération des utilisateurs"
+  "FAILED_TO_FETCH_USERS": "Échec de la récupération des utilisateurs",
+  "ACCOUNT_SUSPENDED": "Compte suspendu",
+  "ACCOUNT_BLOCKED": "Compte bloqué"
 
 
 }
