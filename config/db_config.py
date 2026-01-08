@@ -98,6 +98,8 @@ notification_collection = db["notifications"]
 fcm_device_tokens_collection = db["fcm_device_tokens"]
 private_gallery_purchases_collection = db["private_gallery_purchases"]
 verification_collection = db["verification_history"]
+contest_collection = db["contests"]
+contest_participant_collection = db["contests_participants"]
 
 async def create_indexes():
     """
