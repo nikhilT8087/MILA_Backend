@@ -99,6 +99,13 @@ class ContestVoteModel(BaseModel):
     vote_cost: int
     voted_at: datetime = Field(default_factory=datetime.utcnow)
 
+CONTEST_TYPE_VISIBILITY_MAP = {
+    ContestType.active: [
+        ContestVisibility.upcoming.value,
+        ContestVisibility.in_progress.value,
+    ],
+    ContestType.past: ContestVisibility.completed.value,
+}
 
 async def fetch_active_contests():
     return contest_collection.find(
@@ -124,18 +131,20 @@ async def fetch_past_contests():
 
 
 async def get_contests_paginated(
-    contest_type: str,
+    contest_type: ContestType,
     pagination: StandardResultsSetPagination
 ):
-    if contest_type == "active":
+    visibility_filter = CONTEST_TYPE_VISIBILITY_MAP[contest_type]
+
+    if isinstance(visibility_filter, list):
         query = {
             "is_active": True,
-            "visibility": {"$in": ["upcoming", "in_progress"]}
+            "visibility": {"$in": visibility_filter}
         }
     else:
         query = {
             "is_active": True,
-            "visibility": "completed"
+            "visibility": visibility_filter
         }
 
     total = await contest_collection.count_documents(query)
@@ -167,7 +176,6 @@ async def get_contests_paginated(
             voting_start=contest.get("voting_start")
         )
 
-        # Convert Pydantic → dict (THIS FIXES YOUR ERROR)
         results.append(card.dict())
 
     return results, total

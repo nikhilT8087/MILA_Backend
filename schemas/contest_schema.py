@@ -13,7 +13,6 @@ class ContestCardResponse(BaseModel):
     voting_end: datetime
     total_participants: int
     total_votes: int
-    action_button: str  # participate | vote_now | view_winners
     prize_pool_description: Optional[str] = None
     voting_start: datetime
 

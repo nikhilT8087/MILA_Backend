@@ -82,3 +82,7 @@ class ContestVisibility(str, Enum):
     upcoming = "upcoming"
     in_progress = "in_progress"
     completed = "completed"
+
+class ContestType(str, Enum):
+    active = "active"
+    past = "past"
