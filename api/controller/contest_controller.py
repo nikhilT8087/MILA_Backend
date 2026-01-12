@@ -1,8 +1,9 @@
 from services.translation import translate_message
 from core.utils.response_mixin import CustomResponseMixin
 from config.models.contest_model import *
-from fastapi.encoders import jsonable_encoder
 from core.utils.pagination import StandardResultsSetPagination
+import asyncio
+from core.utils.helper import *
 
 response = CustomResponseMixin()
 
@@ -13,7 +14,7 @@ async def get_contests_controller(
     lang: str = "en"
 ):
     # Verification gate
-    if not current_user.get("is_verified"):
+    if current_user.get("is_verified") is not True:
         return response.success_message(
             translate_message("VERIFICATION_PENDING", lang),
             data=[{"verification_required": True}]
@@ -26,11 +27,90 @@ async def get_contests_controller(
 
     return response.success_message(
         translate_message("CONTESTS_FETCHED", lang),
-        data=[{
-            "results": jsonable_encoder(contests),
+        data=[serialize_datetime_fields(convert_objectid_to_str({
+            "results": contests,
             "page": pagination.page,
             "page_size": pagination.page_size,
             "total": total
-        }]
+        }))]
     )
 
+async def get_contest_details_controller(
+    contest_id: str,
+    current_user: dict,
+    lang: str = "en"
+):
+    # Fetch contest
+    contest = await fetch_contest_by_id(contest_id)
+    if not contest:
+        return response.error_message(
+            translate_message("CONTEST_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    # Fetch active contest history
+    contest_history = await fetch_active_contest_history(contest_id)
+    if not contest_history:
+        return response.error_message(
+            translate_message("CONTEST_HISTORY_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    contest_history_id = str(contest_history["_id"])
+
+    # Parallel IO operations
+    (
+        banner_url,
+        avatars,
+        standings,
+        cta
+    ) = await asyncio.gather(
+        resolve_banner_url(contest["banner_file_id"]),
+        fetch_participant_avatars(contest_id, contest_history_id),
+        fetch_current_standings(contest_id, contest_history),
+        resolve_cta_state(
+            contest=contest,
+            contest_history=contest_history,
+            current_user=current_user
+        )
+    )
+
+    # Build response payload
+    raw_data = {
+        "contest_id": contest_id,
+        "title": contest["title"],
+        "description": contest.get("description"),
+
+        "status": contest_history["status"],
+        "visibility": contest_history["visibility"],
+        "banner_url": banner_url,
+
+        "important_dates": {
+            "registration_start": contest_history["registration_start"],
+            "registration_end": contest_history["registration_end"],
+            "voting_start": contest_history["voting_start"],
+            "voting_end": contest_history["voting_end"]
+        },
+
+        "prize_pool": {
+            "description": contest.get("prize_pool_description"),
+            "distribution": contest.get("prize_distribution", [])
+        },
+
+        "participants": {
+            "count": contest_history["total_participants"],
+            "avatars": avatars,
+            "can_view_all": True
+        },
+
+        "judging_criteria": contest.get("judging_criteria", []),
+        "rules_and_conditions": contest.get("rules_and_conditions", []),
+
+        "current_standings": standings,
+        "cta": cta
+    }
+
+    return response.success_message(
+        translate_message("CONTEST_DETAILS_FETCHED", lang),
+        data=[serialize_datetime_fields(convert_objectid_to_str(raw_data))]
+    )

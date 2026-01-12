@@ -179,3 +179,150 @@ async def get_contests_paginated(
         results.append(card.dict())
 
     return results, total
+
+async def fetch_contest_by_id(contest_id: str):
+    return await contest_collection.find_one(
+        {"_id": ObjectId(contest_id), "is_active": True}
+    )
+
+async def fetch_active_contest_history(contest_id: str):
+    return await contest_history_collection.find_one(
+        {"contest_id": contest_id, "is_active": True}
+    )
+
+
+async def fetch_participant_avatars(
+    contest_id: str,
+    contest_history_id: str,
+    limit: int = 5
+):
+    cursor = contest_participant_collection.find(
+        {
+            "contest_id": contest_id,
+            "contest_history_id": contest_history_id
+        }
+    ).limit(limit)
+
+    avatars = []
+    async for p in cursor:
+        avatars.append(await resolve_user_avatar(p["user_id"]))
+
+    return avatars
+
+async def fetch_current_standings(
+    contest_id: str,
+    contest_history
+):
+    if contest_history["status"] not in [
+        ContestStatus.voting_started,
+        ContestStatus.winner_announced
+    ]:
+        return []
+
+    return await get_leaderboard(
+        contest_id,
+        str(contest_history["_id"])
+    )
+
+
+async def is_user_participant(user_id: str, contest_history_id: str):
+    return await contest_participant_collection.find_one({
+        "contest_history_id": contest_history_id,
+        "user_id": user_id
+    })
+
+async def resolve_cta_state(contest, contest_history, current_user):
+    user_id = str(current_user["_id"])
+
+    if contest_history["status"] == ContestStatus.registration_open:
+        already_participated = await contest_participant_collection.find_one({
+            "contest_id": str(contest["_id"]),
+            "user_id": user_id
+        })
+
+        if already_participated:
+            return {
+                "can_participate": False,
+                "can_vote": False,
+                "reason": "ALREADY_PARTICIPATED"
+            }
+
+        return {"can_participate": True, "can_vote": False}
+
+    if contest_history["status"] == ContestStatus.voting_started:
+        if await is_user_participant(user_id, str(contest_history["_id"])):
+            return {
+                "can_participate": False,
+                "can_vote": False,
+                "reason": "PARTICIPANT_CANNOT_VOTE"
+            }
+
+        return {"can_participate": False, "can_vote": True}
+
+    return {"can_participate": False, "can_vote": False}
+
+async def resolve_user_avatar(user_id: str) -> dict | None:
+    onboarding = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {"profile_photo": 1, "selfie_image": 1}
+    )
+
+    file_id = (
+        onboarding.get("profile_photo")
+        or onboarding.get("selfie_image")
+        if onboarding else None
+    )
+
+    if not file_id:
+        return None
+
+    file_doc = await file_collection.find_one(
+        {"_id": ObjectId(file_id)},
+        {"storage_key": 1, "storage_backend": 1}
+    )
+
+    if not file_doc:
+        return None
+
+    url = await generate_file_url(
+        storage_key=file_doc["storage_key"],
+        backend=file_doc["storage_backend"]
+    )
+
+    return {
+        "user_id": user_id,
+        "avatar_url": url
+    }
+
+async def get_leaderboard(
+    contest_id: str,
+    contest_history_id: str,
+    limit: int = 3
+):
+    cursor = (
+        contest_participant_collection
+        .find(
+            {
+                "contest_id": contest_id,
+                "contest_history_id": str(contest_history_id)
+            }
+        )
+        .sort("total_votes", -1)
+        .limit(limit)
+    )
+
+    leaderboard = []
+    rank = 1
+
+    async for participant in cursor:
+        avatar = await resolve_user_avatar(participant["user_id"])
+
+        leaderboard.append({
+            "rank": rank,
+            "user_id": participant["user_id"],
+            "total_votes": participant.get("total_votes", 0),
+            "avatar": avatar
+        })
+        rank += 1
+
+    return leaderboard

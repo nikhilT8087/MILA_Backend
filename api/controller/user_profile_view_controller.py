@@ -173,12 +173,29 @@ async def retry_verification_selfie_controller(
         upsert=True
     )
 
+    await verification_collection.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "status": "pending",
+                "verified_by_admin_id": None,
+                "verified_at": None,
+                "updated_at": datetime.utcnow()
+            },
+            "$setOnInsert": {
+                "user_id": user_id,
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+    
     # UPDATE USER STATUS
     await user_collection.update_one(
         {"_id": current_user["_id"]},
         {
             "$set": {
-                "is_verified": "false",
+                "is_verified": False,
                 "updated_at": datetime.utcnow()
             }
         }

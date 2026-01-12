@@ -103,6 +103,8 @@ admin_blocked_users_collection = db["admin_blocked_users_history"]
 deleted_account_collection = db["deleted_accounts"]
 contest_collection = db["contests"]
 contest_participant_collection = db["contests_participants"]
+contest_history_collection = db["contest_history"]
+contest_vote_collection = db["contest_vote"]
 
 async def create_indexes():
     """

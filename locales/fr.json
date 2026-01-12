@@ -390,6 +390,10 @@
   "ACCOUNT_IS_BEEN_DELETED": "Le compte a été supprimé",
   "MINIMUM_WITHDRAWAL_AMOUNT_REQUIRED": "Un montant minimum de retrait de {amount} USDT est requis.",
   "INVALID_TRON_ADDRESS": "Adresse de portefeuille TRON invalide.",
-  "HOME_SUGGESTIONS_FETCHED": "Suggestions de la page d’accueil récupérées"
+  "HOME_SUGGESTIONS_FETCHED": "Suggestions de la page d’accueil récupérées",
+
+  "CONTEST_NOT_FOUND": "Concours introuvable",
+  "CONTEST_HISTORY_NOT_FOUND": "Historique du concours introuvable",
+  "CONTEST_DETAILS_FETCHED": "Détails du concours récupérés"
 
 }
