@@ -382,5 +382,10 @@
   "ACCOUNT_IS_BEEN_DELETED": "Account is been deleted",
   "MINIMUM_WITHDRAWAL_AMOUNT_REQUIRED": "A minimum withdrawal amount of {amount} USDT is required.",
   "INVALID_TRON_ADDRESS": "Invalid TRON wallet address.",
-  "HOME_SUGGESTIONS_FETCHED":"Home suggestions fetched"
+  "HOME_SUGGESTIONS_FETCHED":"Home suggestions fetched",
+
+  "CONTEST_NOT_FOUND": "Contest not found",
+  "CONTEST_HISTORY_NOT_FOUND": "Contest history not found",
+  "CONTEST_DETAILS_FETCHED": "Contest details fetched"
+
 }
