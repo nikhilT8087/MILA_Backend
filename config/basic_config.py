@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     MAX_IMAGE_SIZE_MB: int
     MAX_IMAGE_SIZE_BYTES: int
 
+    PUBLIC_DIR: str
+    UPLOAD_DIR: str
+    
     class ConfigDict:
         env_file = ".env"
         extra = "ignore"

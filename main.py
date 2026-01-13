@@ -31,6 +31,7 @@ from config.db_seeder.AdminSeeder import seed_admin
 from config.db_seeder.SubscriptionPlanSeeder import seed_subscription_plan
 
 from core.firebase import init_firebase
+from config.basic_config import *
 
 init_firebase()
 
@@ -38,13 +39,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 app = FastAPI()
 
 # Make sure your uploads folder exists
-UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+BASE_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
+
+PUBLIC_DIR = os.path.join(BASE_DIR, settings.PUBLIC_DIR)
+UPLOAD_DIR = os.path.join(BASE_DIR, settings.UPLOAD_DIR)
 
 PUBLIC_GALLERY_DIR = os.path.join(UPLOAD_DIR, "public_gallery")
 PRIVATE_GALLERY_DIR = os.path.join(UPLOAD_DIR, "private_gallery")
 PROFILE_PHOTO_DIR = os.path.join(UPLOAD_DIR, "profile_photo")
 SELFIE_DIR = os.path.join(UPLOAD_DIR, "selfie")
-GIFTS_DIR = os.path.join(UPLOAD_DIR, "gift")
+GIFTS_DIR = os.path.join(PUBLIC_DIR, "gift")
 BANNER_DIR = os.path.join(UPLOAD_DIR, "contest_banner")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
