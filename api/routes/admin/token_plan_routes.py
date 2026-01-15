@@ -1,13 +1,30 @@
 from fastapi import APIRouter, Depends, Query, Path
 
 from api.controller.admin.admin_token_controller import create_token_package_plan, update_token_package_plan_controller, \
-    soft_delete_token_package_plan_controller
+    soft_delete_token_package_plan_controller, fetch_active_token_package_plans
 from core.utils.permissions import AdminPermission
 from schemas.token_package_schema import TokenPackagePlanResponseModel, TokenPackageCreateRequestModel, \
     TokenPackagePlanUpdateRequestModel
 
 admin_router = APIRouter(prefix="/api/admin/token-plans", tags=["Admin • Token Plans"])
 supported_langs = ["en", "fr"]
+
+@admin_router.get("")
+async def list_token_plans(
+    current_user: dict = Depends(AdminPermission(allowed_roles=["admin"])),
+    lang: str = Query(None)
+):
+    """
+    List all token package plans.
+    Soft-deleted plans are excluded.
+    """
+
+    lang = lang if lang in supported_langs else "en"
+
+    return await fetch_active_token_package_plans(
+        lang=lang
+    )
+
 @admin_router.post("", response_model=TokenPackagePlanResponseModel)
 async def create_token_plan(
     request: TokenPackageCreateRequestModel,
