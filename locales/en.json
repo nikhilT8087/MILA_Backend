@@ -409,5 +409,7 @@
   "TOKEN_PACKAGE_PLAN_UPDATE_FAILED": "Failed to update the token package plan. Please try again later.",
   "TOKEN_PACKAGE_PLAN_DELETED_SUCCESSFULLY": "Token package plan deleted successfully.",
   "TOKEN_PLAN_ALREADY_DELETED": "Token package plan is already deleted.",
-  "TOKEN_PACKAGE_PLAN_DELETE_FAILED": "Failed to delete the token package plan. Please try again later."
+  "TOKEN_PACKAGE_PLAN_DELETE_FAILED": "Failed to delete the token package plan. Please try again later.",
+  "TOKEN_PACKAGE_PLANS_FETCHED_SUCCESSFULLY": "Token package plans fetched successfully.",
+  "ERROR_WHILE_FETCHING_TOKEN_PACKAGE_PLANS": "Failed to fetch token package plans."
 }

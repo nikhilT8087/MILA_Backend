@@ -10,8 +10,8 @@ from core.utils.helper import convert_objectid_to_str, calculate_usdt_amount
 
 response = CustomResponseMixin()
 
-async def get_token_packages_plans():
-    return await token_packages_plan_collection.find({'status':'active'}).to_list()
+async def get_token_packages_plans(condition:dict):
+    return await token_packages_plan_collection.find(condition).sort("created_at", -1).to_list()
 
 async def get_token_packages_plan(plan_id, lang:str) -> Any:
     """

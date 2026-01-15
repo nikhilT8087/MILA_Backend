@@ -51,3 +51,16 @@ class TokenPackagePlanUpdateRequestModel(BaseModel):
         if not v or not v.strip():
             raise ValueError("Title cannot be empty")
         return v.strip()
+
+class TokenPackagePlanListResponseModel(BaseModel):
+    id: str = Field(alias="_id")
+    title: str
+    amount: str
+    tokens: str
+    status: str
+    created_at: str
+    updated_at: str
+
+    model_config = {
+        "populate_by_name": True
+    }

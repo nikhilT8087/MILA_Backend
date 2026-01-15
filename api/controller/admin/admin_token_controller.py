@@ -2,7 +2,8 @@ from bson import ObjectId
 
 from config.db_config import token_packages_plan_collection
 from config.models.token_packages_plan_model import store_token_packages_plan, update_token_package_plan, \
-    soft_delete_token_package_plan
+    soft_delete_token_package_plan, get_token_packages_plans
+from core.utils.core_enums import TokenPlanStatus
 from core.utils.exceptions import CustomValidationError
 from core.utils.helper import convert_objectid_to_str, serialize_datetime_fields, calculate_usdt_amount
 from schemas.token_package_schema import TokenPackageCreateRequestModel, TokenPackagePlanCreateModel, \
@@ -124,6 +125,50 @@ async def soft_delete_token_package_plan_controller(
             data=str(e),
             status_code=500
         )
+
+async def fetch_active_token_package_plans(
+    lang: str
+):
+    """
+    Controller to fetch token package plans.
+    """
+
+    try:
+        token_plans = await get_token_packages_plans(
+            condition={
+                "status": {
+                    "$in": [
+                        TokenPlanStatus.active.value,
+                        TokenPlanStatus.inactive.value
+                    ]
+                },
+                "$or": [
+                    {"deleted": {"$exists": False}},
+                    {"deleted": None},
+                    {"deleted": False}
+                ]
+            }
+        )
+        token_plans = convert_objectid_to_str(token_plans)
+        token_plans = serialize_datetime_fields(token_plans)
+        return response.success_message(
+            translate_message(
+                message="TOKEN_PACKAGE_PLANS_FETCHED_SUCCESSFULLY",
+                lang=lang
+            ),
+            data=token_plans
+        )
+
+    except Exception as e:
+        raise response.raise_exception(
+            translate_message(
+                message="ERROR_WHILE_FETCHING_TOKEN_PACKAGE_PLANS",
+                lang=lang
+            ),
+            data=str(e),
+            status_code=500
+        )
+
 
 
 
