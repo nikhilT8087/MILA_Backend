@@ -50,7 +50,7 @@ class PyObjectId(str):
         return json_schema
 
 FREE_FILTERS = {
-    "cities": ("country", "$in"),
+    "country": ("country", "$in"),
     "genders": ("gender", "$in"),
 }
 
@@ -76,6 +76,7 @@ class FileType(str, Enum):
     PUBLIC_GALLERY = "public_gallery"
     PRIVATE_GALLERY = "private_gallery"
     GIFT = "gift"
+    VERIFICATION_SELFIE = "verification_selfie"
 
 # ---- Files model ----
 class Files(BaseModel):

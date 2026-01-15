@@ -1,11 +1,11 @@
-from fastapi import HTTPException , status
 from bson import ObjectId
 from datetime import datetime
-from config.db_config import onboarding_collection , user_collection  , favorite_collection ,user_like_history ,user_match_history , user_passed_hostory,countries_collection,interest_categories_collection
+from config.db_config import user_collection  , favorite_collection ,user_like_history ,user_match_history , user_passed_hostory,user_passed_hostory
 from core.utils.helper import serialize_datetime_fields
 from core.utils.response_mixin import CustomResponseMixin
 from core.utils.helper import serialize_datetime_fields
 from services.translation import translate_message
+from core.utils.core_enums import MembershipType
 
 
 response = CustomResponseMixin()
@@ -13,6 +13,26 @@ response = CustomResponseMixin()
 
 # function help to add user to favorites collection
 async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
+
+    # ------------------ PREMIUM VALIDATION ------------------
+    user = await user_collection.find_one(
+        {"_id": ObjectId(user_id)},
+        {"membership_type": 1}
+    )
+
+    if not user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    if user.get("membership_type") != MembershipType.PREMIUM:
+        return response.error_message(
+            translate_message("PREMIUM_REQUIRED_TO_ADD_FAVORITES", lang),
+            status_code=403
+        )
+
+    # ------------------ SELF CHECK ------------------
     if user_id == favorite_user_id:
         return response.error_message(
             translate_message("CANNOT_ADD_SELF_TO_FAVORITES", lang),
@@ -29,6 +49,19 @@ async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
             status_code=404
         )
 
+    # ------------------ PASSED USER CHECK (NEW) ------------------
+    passed_user = await user_passed_hostory.find_one({
+        "user_id": user_id,
+        "passed_user_ids": favorite_user_id
+    })
+
+    if passed_user:
+        return response.error_message(
+            translate_message("CANNOT_FAVORITE_PASSED_USER", lang),
+            status_code=400
+        )
+
+    # ------------------ ALREADY IN FAVORITES ------------------
     existing_fav = await favorite_collection.find_one(
         {
             "user_id": user_id,
@@ -95,6 +128,19 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
         "liked_by_user_ids": user_id
     })
 
+
+    passed_user = await user_passed_hostory.find_one({
+        "user_id": user_id,
+        "passed_user_ids": liked_user_id
+    })
+
+    if passed_user:
+        return response.error_message(
+            translate_message("CANNOT_LIKE_PASSED_USER", lang),
+            data=[],
+            status_code=400
+        )
+
     if already_liked:
         return response.error_message(
             translate_message("USER_ALREADY_LIKED", lang),
@@ -116,28 +162,41 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
         upsert=True
     )
 
-    #  Check mutual like (MATCH)
-    mutual_like = await user_like_history.find_one({
+    # --------------------------------------------------
+    # 2 CHECK MUTUAL LIKE
+    # --------------------------------------------------
+    user_liked_them = await user_like_history.find_one({
         "user_id": user_id,
         "liked_by_user_ids": liked_user_id
     })
 
+    they_liked_user = await user_like_history.find_one({
+        "user_id": liked_user_id,
+        "liked_by_user_ids": user_id
+    })
+
     is_match = False
 
-    if mutual_like:
+    # --------------------------------------------------
+    # 3 CREATE MATCH (ATOMIC & SAFE)
+    # --------------------------------------------------
+    if user_liked_them and they_liked_user:
+        # Sorted pair ensures consistency
         user_pair = sorted([user_id, liked_user_id])
 
-        existing_match = await user_match_history.find_one({
-            "user_ids": user_pair
-        })
+        result = await user_match_history.update_one(
+            {"user_ids": user_pair},
+            {
+                "$setOnInsert": {
+                    "user_ids": user_pair,
+                    "created_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
 
-        if not existing_match:
-            await user_match_history.insert_one({
-                "user_ids": user_pair,
-                "created_at": datetime.utcnow()
-            })
-
-        is_match = True
+        # True only if a new match was created
+        is_match = bool(result.upserted_id)
 
     return response.success_message(
         translate_message(
