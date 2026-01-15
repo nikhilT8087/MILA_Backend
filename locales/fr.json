@@ -392,6 +392,10 @@
   "INVALID_TRON_ADDRESS": "Adresse de portefeuille TRON invalide.",
   "HOME_SUGGESTIONS_FETCHED": "Suggestions de la page d’accueil récupérées",
 
+  "TOKEN_PACKAGE_PLAN_TITLE_ALREADY_EXISTS": "Un forfait de jetons portant ce titre existe déjà.",
+  "TOKEN_PACKAGE_PLAN_CREATED": "Plan de forfait de jetons créé avec succès.",
+  "TOKEN_PACKAGE_PLAN_CREATION_FAILED": "Impossible de créer un forfait de jetons. Veuillez réessayer plus tard.",
+
   "CONTEST_NOT_FOUND": "Concours introuvable",
   "CONTEST_HISTORY_NOT_FOUND": "Historique du concours introuvable",
   "CONTEST_DETAILS_FETCHED": "Détails du concours récupérés",
