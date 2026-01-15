@@ -5,6 +5,7 @@ from schemas.token_package_schema import TokenPackagePlanCreateModel
 from services.translation import translate_message
 from core.utils.response_mixin import CustomResponseMixin
 from config.db_config import token_packages_plan_collection
+from core.utils.helper import convert_objectid_to_str
 response = CustomResponseMixin()
 
 async def get_token_packages_plans():
@@ -23,10 +24,11 @@ async def get_token_packages_plan(plan_id, lang:str) -> Any:
         )
     return packages_plan_data
 
-async def store_token_packages_plan(doc:TokenPackagePlanCreateModel) -> Any:
+async def store_token_packages_plan(doc:TokenPackagePlanCreateModel, admin_user:str) -> Any:
     doc = doc.model_dump()
+    doc['created_by'] = ObjectId(admin_user)
     result = await token_packages_plan_collection.insert_one(doc)
-    doc["id"] = token_packages_plan_collection(result.inserted_id)
+    doc["_id"] = convert_objectid_to_str(result.inserted_id)
     return doc
 
 async def get_token_packages_plan_details(

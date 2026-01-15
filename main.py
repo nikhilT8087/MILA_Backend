@@ -12,6 +12,10 @@ from api.routes import (
     verification_routes, contest_api_route, user_management
 )
 
+from api.routes.admin import (
+    token_plan_routes
+)
+
 from core.utils.exceptions import CustomValidationError, custom_validation_error_handler, validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -231,6 +235,8 @@ app.include_router(block_report_route.router)
 app.include_router(fcm_route.router, prefix="/api/fcm")
 app.include_router(contest_api_route.router, prefix="/api/contests")
 app.include_router(user_management.router)
+
+app.include_router(token_plan_routes.admin_router)
 
 # Scheduler Instance
 scheduler = BackgroundScheduler()

@@ -31,6 +31,9 @@ from config.models.onboarding_model import *
 from core.utils.auth_utils import *
 from enum import Enum
 from typing import List
+from decimal import Decimal, ROUND_HALF_UP
+
+TOKEN_TO_USDT_RATE = Decimal("0.05")
 
 load_dotenv()
 
@@ -231,3 +234,21 @@ async def get_country_name_by_id(
         return country_doc.get("name") if country_doc else None
     except Exception:
         return None
+
+def calculate_usdt_amount(tokens: int) -> Decimal:
+    """
+    Calculate USDT amount based on token volume.
+
+    Rules:
+    - 1 Token = 0.05 USDT
+    - Result rounded to 2 decimal places
+
+    :param tokens: Number of token
+    :return: USDT amounts
+    """
+    if tokens <= 0:
+        raise ValueError("Tokens must be greater than 0")
+
+    usdt_amount = Decimal(tokens) * TOKEN_TO_USDT_RATE
+
+    return usdt_amount.quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
