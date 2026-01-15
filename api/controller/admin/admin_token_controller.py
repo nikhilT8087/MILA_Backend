@@ -1,7 +1,8 @@
 from bson import ObjectId
 
 from config.db_config import token_packages_plan_collection
-from config.models.token_packages_plan_model import store_token_packages_plan, update_token_package_plan
+from config.models.token_packages_plan_model import store_token_packages_plan, update_token_package_plan, \
+    soft_delete_token_package_plan
 from core.utils.exceptions import CustomValidationError
 from core.utils.helper import convert_objectid_to_str, serialize_datetime_fields, calculate_usdt_amount
 from schemas.token_package_schema import TokenPackageCreateRequestModel, TokenPackagePlanCreateModel, \
@@ -91,5 +92,38 @@ async def update_token_package_plan_controller(
             data=str(e),
             status_code=500
         )
+
+async def soft_delete_token_package_plan_controller(
+    plan_id: str,
+    current_user: dict,
+    lang: str
+):
+    try:
+        deleted_plan = await soft_delete_token_package_plan(
+            plan_id=plan_id,
+            admin_user_id=str(current_user["_id"]),
+            lang=lang
+        )
+
+        return response.success_message(
+            translate_message(
+                message="TOKEN_PACKAGE_PLAN_DELETED_SUCCESSFULLY",
+                lang=lang
+            ),
+            data=[deleted_plan]
+        )
+    except CustomValidationError as error:
+        return response.error_message(
+            message=error.message,
+            data=error.data,
+            status_code=error.status_code
+        )
+    except Exception as e:
+        return response.raise_exception(
+            translate_message(message="TOKEN_PACKAGE_PLAN_DELETE_FAILED", lang=lang),
+            data=str(e),
+            status_code=500
+        )
+
 
 
