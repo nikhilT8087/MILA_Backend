@@ -414,5 +414,8 @@
   "TOKEN_PACKAGE_PLAN_CREATED": "Plan de forfait de jetons créé avec succès.",
   "TOKEN_PACKAGE_PLAN_CREATION_FAILED": "Impossible de créer un forfait de jetons. Veuillez réessayer plus tard.",
   "TOKEN_PLAN_UPDATED_SUCCESSFULLY": "Le forfait de jetons a été mis à jour avec succès.",
-  "TOKEN_PACKAGE_PLAN_UPDATE_FAILED": "Impossible de mettre à jour le forfait de jetons. Veuillez réessayer plus tard."
+  "TOKEN_PACKAGE_PLAN_UPDATE_FAILED": "Impossible de mettre à jour le forfait de jetons. Veuillez réessayer plus tard.",
+  "TOKEN_PACKAGE_PLAN_DELETED_SUCCESSFULLY": "Le forfait de jetons a été supprimé avec succès.",
+  "TOKEN_PLAN_ALREADY_DELETED": "Le forfait de jetons a déjà été supprimé.",
+  "TOKEN_PACKAGE_PLAN_DELETE_FAILED": "Impossible de supprimer le forfait de jetons. Veuillez réessayer plus tard."
 }

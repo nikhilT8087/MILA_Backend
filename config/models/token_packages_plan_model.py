@@ -111,3 +111,45 @@ async def update_token_package_plan(
         "created_at": updated["created_at"],
         "updated_at": updated["updated_at"]
     }
+
+
+async def soft_delete_token_package_plan(
+    plan_id: str,
+    admin_user_id: str,
+    lang: str
+):
+    """
+    Soft delete token package plan by marking it deleted.
+    """
+
+    plan = await token_packages_plan_collection.find_one({
+        "_id": ObjectId(plan_id)
+    })
+
+    if not plan:
+        raise response.raise_exception(
+            translate_message("TOKEN_PACKAGE_PLAN_NOT_FOUND", lang=lang),
+            status_code=404
+        )
+
+    if plan.get("deleted"):
+        raise response.raise_exception(
+            translate_message("TOKEN_PLAN_ALREADY_DELETED", lang=lang),
+            status_code=400
+        )
+
+    await token_packages_plan_collection.update_one(
+        {"_id": ObjectId(plan_id)},
+        {
+            "$set": {
+                "deleted": True,
+                "deleted_at": datetime.now(timezone.utc),
+                "deleted_by": ObjectId(admin_user_id)
+            }
+        }
+    )
+
+    return {
+        "id": str(plan["_id"]),
+        "deleted": True
+    }

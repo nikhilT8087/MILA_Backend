@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, Path
 
-from api.controller.admin.admin_token_controller import create_token_package_plan, update_token_package_plan_controller
+from api.controller.admin.admin_token_controller import create_token_package_plan, update_token_package_plan_controller, \
+    soft_delete_token_package_plan_controller
 from core.utils.permissions import AdminPermission
 from schemas.token_package_schema import TokenPackagePlanResponseModel, TokenPackageCreateRequestModel, \
     TokenPackagePlanUpdateRequestModel
@@ -38,6 +39,25 @@ async def update_token_plan(
     return await update_token_package_plan_controller(
         plan_id=plan_id,
         payload=request,
+        current_user=current_user,
+        lang=lang
+    )
+
+@admin_router.delete("/{plan_id}")
+async def soft_delete_token_plan(
+    plan_id: str = Path(..., description="Token package plan ID"),
+    current_user: dict = Depends(AdminPermission(allowed_roles=["admin"])),
+    lang: str = Query(None)
+):
+    """
+    Soft delete token package plan (Admin only).
+    Marks the plan as deleted.
+    """
+
+    lang = lang if lang in supported_langs else "en"
+
+    return await soft_delete_token_package_plan_controller(
+        plan_id=plan_id,
         current_user=current_user,
         lang=lang
     )
