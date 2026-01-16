@@ -88,7 +88,6 @@ def generate_verification_code(length: int =4) -> str:
 
 # Function to send_email
 async def send_email(to_email: str, subject: str, body: str, is_html: bool = False):
-    print("Function for send email called")
     send_email_task.delay(to_email, subject, body, is_html)
 
 

@@ -536,14 +536,6 @@ async def search_profiles_controller(
     pagination: StandardResultsSetPagination,
     lang: str = "en"
 ):
-    
-    print("===== PAGINATION INPUT =====")
-    print("page:", pagination.page)
-    print("page_size:", pagination.page_size)
-    print("skip:", pagination.skip)
-    print("limit:", pagination.limit)
-    print("============================")   
-
     user_membership = current_user.get("membership_type", MembershipType.FREE)
     is_premium = user_membership == MembershipType.PREMIUM
 
@@ -601,45 +593,49 @@ async def search_profiles_controller(
                     query[db_field] = birthdate_query
 
     total_matching = await onboarding_collection.count_documents(query)
-    print("===== QUERY DEBUG =====")
-    print("Mongo query:", query)
-    print("Total matching onboarding docs:", total_matching)
-    print("=======================")
 
     # QUERY WITH PAGINATION
-    cursor = (
-        onboarding_collection
-        .find(query)
-        .skip(pagination.skip)
-        .limit(pagination.limit)
-    )
+    base_pipeline = [
+        {"$match": query},
+        {"$match": {"user_id": {"$ne": None}}},
+        {"$addFields": {"user_obj_id": {"$toObjectId": "$user_id"}}},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_obj_id",
+                "foreignField": "_id",
+                "as": "user"
+            }
+        },
+        {"$unwind": "$user"},
+        {"$match": {"user.is_deleted": {"$ne": True}}},
+    ]
 
-    raw_docs = await onboarding_collection.find(query) \
-        .skip(pagination.skip) \
-        .limit(pagination.limit) \
-        .to_list(length=pagination.limit)
+    count_pipeline = base_pipeline + [
+        {"$count": "total"}
+    ]
 
-    print("===== MONGO PAGINATION RESULT =====")
-    print("Mongo returned docs count:", len(raw_docs))
-    print("Onboarding user_ids:")
-    for d in raw_docs:
-        print(" -", d.get("user_id"))
-    print("==================================")
+    count_cursor = onboarding_collection.aggregate(count_pipeline)
+    count_result = await count_cursor.to_list(length=1)
+
+    total_matching = count_result[0]["total"] if count_result else 0
+
+    data_pipeline = base_pipeline + [
+        {"$sort": {"_id": 1}}
+    ]
+
+    if pagination.page is not None and pagination.page_size is not None:
+        data_pipeline.extend([
+            {"$skip": pagination.skip},
+            {"$limit": pagination.page_size}
+        ])
+
+    cursor = onboarding_collection.aggregate(data_pipeline)
 
     results = []
 
-    print("===== POST PAGINATION FILTERING =====")
-
     async for onboarding in cursor:
-        user = await user_collection.find_one(
-            {"_id": ObjectId(onboarding["user_id"]), "is_deleted": {"$ne": True}}
-        )
-        if not user:
-            print("DROPPED after pagination | user_id:", user)
-            continue
-
-        print("INCLUDED | user_id:", user)
-
+        user = onboarding["user"]
         birthdate = onboarding.get("birthdate")
 
         age = calculate_age(birthdate) if birthdate else None
@@ -658,14 +654,13 @@ async def search_profiles_controller(
             "login_status": user.get("login_status")
         })
 
-    print("Final results count sent to client:", len(results))
-    print("====================================")
     return response.success_message(
         translate_message("SEARCH_RESULTS_FETCHED", lang),
         data=[{
             "results": results,
             "page": pagination.page,
             "page_size": pagination.page_size,
+            "total": total_matching,
             "premium_required": False
         }]
     )

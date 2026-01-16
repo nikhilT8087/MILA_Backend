@@ -63,7 +63,6 @@ def send_contact_us_email_task(first_name: str, last_name: str, email: str, mobi
 response = CustomResponseMixin()
 @celery_app.task(name="tasks.send_email_task")
 def send_email_task(to_email: str, subject: str, body: str, is_html: bool = False):
-    print("Celery task called")
     smtp_send_email(to_email=to_email, subject=subject, body=body, is_html=is_html)
 
 
