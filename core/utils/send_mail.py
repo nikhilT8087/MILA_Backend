@@ -4,7 +4,7 @@ from config.basic_config import settings
 
 #helper function for send_email
 def smtp_send_email(to_email: str, subject: str, body: str, is_html: bool = False):
-
+    print("Helper function for send email called")
     msg_type = "html" if is_html else "plain"
     msg = MIMEText(body, msg_type)
     
@@ -21,6 +21,7 @@ def smtp_send_email(to_email: str, subject: str, body: str, is_html: bool = Fals
 
         else:
             with smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT) as server:
+                print("Serve called")
                 server.starttls()
                 server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
                 server.sendmail(settings.EMAIL_FROM, to_email, msg.as_string())
