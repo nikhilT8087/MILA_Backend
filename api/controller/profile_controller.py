@@ -126,13 +126,13 @@ async def upload_public_gallery_controller(images, current_user, lang: str = "en
     if not images:
         return response.error_message(translate_message("PUBLIC_GALLERY_IMAGES_REQUIRED", lang=lang), data=[], status_code=400)
 
-    # Fetch existing public gallery count
-    onboarding = await onboarding_collection.find_one(
-        {"user_id": str(current_user["_id"])},
-        {"public_gallery": 1}
+    user_id = str(current_user["_id"])
+
+    existing_count = await get_gallery_count(
+        user_id=user_id,
+        gallery_field="public_gallery"
     )
 
-    existing_count = len(onboarding.get("public_gallery", [])) if onboarding else 0
     incoming_count = len(images)
 
     # Enforce TOTAL limit (existing + new)
