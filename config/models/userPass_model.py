@@ -142,12 +142,13 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
     })
 
     if already_liked:
-        return response.success_message(
+        return response.error_message(
             translate_message("USER_ALREADY_LIKED", lang),
             data=[{
                 "liked_user_id": liked_user_id,
                 "is_match": False
-            }]
+            }],
+            status_code=400
         )
 
     # Add like
