@@ -451,5 +451,17 @@
   "CONTEST_DELETED_SUCCESSFULLY": "Concours supprimé avec succès",
   "FAILED_TO_DELETE_CONTEST": "Échec de la suppression du concours",
   "CONTEST_PARTICIPANTS_FETCHED_SUCCESSFULLY": "Participants au concours récupérés avec succès",
-  "FAILED_TO_FETCH_CONTEST_PARTICIPANTS": "Échec de la récupération des participants au concours"
+  "FAILED_TO_FETCH_CONTEST_PARTICIPANTS": "Échec de la récupération des participants au concours",
+
+  "WITHDRAWAL_REQUESTS_FETCHED": "Demandes de retrait récupérées avec succès.",
+  "WITHDRAWAL_REQUESTS_FETCH_FAILED": "Impossible de récupérer les demandes de retrait. Veuillez réessayer plus tard.",
+  "WITHDRAWAL_REQUEST_NOT_FOUND": "Demande de retrait introuvable.",
+  "WITHDRAWAL_REQUEST_CANNOT_BE_REJECTED": "Cette demande de retrait ne peut être rejetée en l'état.",
+  "WITHDRAWAL_REQUEST_REJECTED_SUCCESSFULLY": "Demande de retrait rejetée avec succès.",
+  "WITHDRAWAL_REQUEST_REJECT_FAILED": "Impossible de refuser la demande de retrait. Veuillez réessayer plus tard.",
+
+  "WITHDRAWAL_TRANSACTION_ID_ALREADY_USED": "Cet identifiant de transaction a déjà été utilisé pour un retrait.",
+  "WITHDRAWAL_REQUEST_APPROVED_SUCCESSFULLY": "Demande de retrait approuvée avec succès.",
+  "WITHDRAWAL_REQUEST_NOT_ELIGIBLE_FOR_COMPLETION": "Cette demande de retrait ne peut être approuvée.",
+  "WITHDRAWAL_PAID_AMOUNT_MISMATCH": "Le montant payé ne correspond pas au montant de la demande de retrait."
 }

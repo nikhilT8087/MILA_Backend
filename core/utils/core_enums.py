@@ -58,6 +58,7 @@ class NotificationType(str, Enum):
     SUBSCRIPTION_EXPIRY = "subscription_expiry"
     REPORT = "report"
     BLOCK = "block"
+    TOKEN_WITHDRAW_STATUS = "token_withdrawn_status_updated"
 
 class VerificationStatusEnum(str, Enum):
     PENDING = "pending"
@@ -93,3 +94,9 @@ class ContestType(str, Enum):
 class TokenPlanStatus(str, Enum):
     active = "active",
     inactive = "inactive",
+
+class WithdrawalStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+    completed = "completed"
