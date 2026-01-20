@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -6,6 +7,9 @@ from datetime import datetime, timezone
 from config.db_config import withdraw_token_transaction_collection
 from core.utils.core_enums import WithdrawalStatus
 from core.utils.response_mixin import CustomResponseMixin
+from core.utils.transaction_helper import get_transaction_details
+from schemas.transcation_schema import PaymentDetailsModel
+from schemas.withdrawal_request_schema import AdminWithdrawalCompleteRequestModel
 from services.translation import translate_message
 
 response = CustomResponseMixin()
@@ -162,7 +166,7 @@ async def reject_withdrawal_request(
                 message="WITHDRAWAL_REQUEST_CANNOT_BE_REJECTED",
                 lang=lang
             ),
-            status_code=400
+            status_code=409
         )
 
     update_doc = {
@@ -180,4 +184,95 @@ async def reject_withdrawal_request(
         "id": request_id,
         "user_id": str(withdrawal["user_id"]),
         "status": WithdrawalStatus.rejected.value
+    }
+
+async def complete_withdrawal_request(
+    request_id: str,
+    payload: AdminWithdrawalCompleteRequestModel,
+    admin_user_id: str,
+    lang: str
+):
+    """
+    Mark an approved withdrawal request as completed.
+    """
+
+    withdrawal = await withdraw_token_transaction_collection.find_one(
+        {"_id": ObjectId(request_id)}
+    )
+
+    if not withdrawal:
+        raise response.raise_exception(
+            translate_message(message="WITHDRAWAL_REQUEST_NOT_FOUND", lang=lang),
+            status_code=404
+        )
+
+    if withdrawal["status"] != WithdrawalStatus.pending.value:
+        raise response.raise_exception(
+            translate_message(
+                message="WITHDRAWAL_REQUEST_NOT_ELIGIBLE_FOR_COMPLETION",
+                lang=lang
+            ),
+            status_code=409
+        )
+
+    """
+        validate transaction id is existed in payment details
+    """
+    transaction = await withdraw_token_transaction_collection.find_one(
+        {"payment_details.tron_txn_id": payload.tron_txn_id},
+        {"payment_details.$": 1}  # return
+    )
+    if transaction is not None:
+        raise response.raise_exception(translate_message("WITHDRAWAL_TRANSACTION_ID_ALREADY_USED",
+                                                         lang=lang), data=[], status_code=400)
+
+    trans_details = await get_transaction_details(txn_id=payload.tron_txn_id,lang=lang)
+
+    if trans_details["to"] != withdrawal['wallet_address']:
+        raise response.raise_exception(
+            translate_message(
+                message="INVALID_DESTINATION_WALLET",
+                lang=lang
+            ),
+            status_code=400
+        )
+
+
+    payment_details = PaymentDetailsModel(**trans_details).model_dump()
+
+    request_amount = Decimal(str(withdrawal["request_amount"]))
+    paid_amount = payload.paid_amount
+
+    total_amount = paid_amount + Decimal(str(withdrawal["platform_fee"])) + payload.tron_fee
+
+    if total_amount != request_amount:
+        raise response.raise_exception(
+            translate_message(
+                message="WITHDRAWAL_PAID_AMOUNT_MISMATCH",
+                lang=lang
+            ),
+            status_code=400
+        )
+
+    update_doc = {
+        "status": WithdrawalStatus.completed.value,
+        "paid_amount": float(paid_amount),
+        "remaining_amount": 0,
+        "tron_fee": float(payload.tron_fee),
+        "payment_details": payment_details,
+        "updated_at": datetime.now(timezone.utc),
+        "updated_by": ObjectId(admin_user_id)
+    }
+
+    await withdraw_token_transaction_collection.update_one(
+        {"_id": ObjectId(request_id)},
+        {"$set": update_doc}
+    )
+
+    return {
+        "id": request_id,
+        "user_id": str(withdrawal["user_id"]),
+        "status": WithdrawalStatus.completed.value,
+        "paid_amount": float(paid_amount),
+        "tron_txn_id": payload.tron_txn_id
     }

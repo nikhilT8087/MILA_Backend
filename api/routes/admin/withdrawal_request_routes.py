@@ -1,9 +1,10 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, Path
 from api.controller.admin.admin_withdrawal_controller import fetch_withdrawal_requests, \
-    reject_withdrawal_request_controller
+    reject_withdrawal_request_controller, complete_withdrawal_request_controller
 from core.utils.pagination import StandardResultsSetPagination, pagination_params
 from core.utils.permissions import AdminPermission
+from schemas.withdrawal_request_schema import AdminWithdrawalCompleteRequestModel
 
 admin_router = APIRouter(prefix="/api/admin/withdrawals", tags=["Admin • Withdrawal Request"])
 supported_langs = ["en", "fr"]
@@ -31,7 +32,7 @@ async def list_withdrawals(
 async def reject_withdrawal(
     request_id: str = Path(..., description="Withdrawal request ID"),
     current_user: dict = Depends(AdminPermission(["admin"])),
-    lang: str = Query(None)
+    lang: str = Query("en")
 ):
     """
     Reject a withdrawal request (Admin only).
@@ -40,6 +41,26 @@ async def reject_withdrawal(
     user_id = str(current_user["_id"])
     return await reject_withdrawal_request_controller(
         request_id=request_id,
-        current_user=user_id,
+        user_id=user_id,
+        lang=lang
+    )
+
+@admin_router.post("/{request_id}/approve")
+async def complete_withdrawal(
+    request_id: str,
+    payload: AdminWithdrawalCompleteRequestModel,
+    current_user: dict = Depends(AdminPermission(["admin"])),
+    lang: str = Query("en")
+):
+    """
+    Approve a withdrawal request after verifying on-chain transaction.
+    """
+    lang = lang if lang in supported_langs else "en"
+    user_id = str(current_user["_id"])
+
+    return await complete_withdrawal_request_controller(
+        request_id=request_id,
+        payload=payload,
+        user_id=user_id,
         lang=lang
     )

@@ -423,6 +423,10 @@
   "PUSH_TITLE_WITHDRAWAL_REQUEST_REJECTED": "Withdrawal Request Rejected",
   "PUSH_MESSAGE_WITHDRAWAL_REQUEST_REJECTED": "Your withdrawal request has been rejected. Please contact support for more details.",
   "PUSH_TITLE_WITHDRAWAL_COMPLETED": "Withdrawal Successful",
-  "PUSH_MESSAGE_WITHDRAWAL_COMPLETED": "Your withdrawal has been completed successfully. The funds have been sent to your wallet."
+  "PUSH_MESSAGE_WITHDRAWAL_COMPLETED": "Your withdrawal has been completed successfully. The funds have been sent to your wallet.",
 
+  "WITHDRAWAL_TRANSACTION_ID_ALREADY_USED": "This transaction ID has already been used for a withdrawal.",
+  "WITHDRAWAL_REQUEST_APPROVED_SUCCESSFULLY": "Withdrawal request approved successfully.",
+  "WITHDRAWAL_REQUEST_NOT_ELIGIBLE_FOR_COMPLETION": "This withdrawal request cannot be approved.",
+  "WITHDRAWAL_PAID_AMOUNT_MISMATCH": "Paid amount does not match the withdrawal request amount."
 }
