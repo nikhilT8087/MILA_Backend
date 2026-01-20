@@ -9,7 +9,7 @@ from api.routes import (
     profile_api, token_history_route, profile_api_route ,
     userPass_route, like_route_api, block_report_route, user_profile_view_api_route,
     fcm_route,
-    verification_routes, contest_api_route, user_management , moderation_route , 
+    verification_routes, contest_api_route, user_management , moderation_route
 )
 
 from api.routes.admin import (

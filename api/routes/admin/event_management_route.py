@@ -4,7 +4,15 @@ from core.utils.permissions import AdminPermission
 from core.utils.core_enums import ContestVisibility ,ContestFrequency
 from core.utils.pagination import StandardResultsSetPagination ,pagination_params
 from schemas.event_management_schema import ContestCreateSchema ,ContestUpdateSchema
-from api.controller.admin.event_management_controller import create_contest ,upload_contest_banner  ,fetch_contests ,get_contest_details_controller ,update_contest_controller,delete_contest_controller,get_contest_participants_controller
+from api.controller.admin.event_management_controller import (
+    create_contest ,
+    upload_contest_banner  ,
+    fetch_contests ,
+    get_contest_details_controller ,
+    update_contest_controller,
+    delete_contest_controller,
+    get_contest_participants_controller
+)
 from fastapi import UploadFile
 
 
