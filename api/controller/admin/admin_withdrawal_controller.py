@@ -2,14 +2,16 @@ from typing import Optional
 
 from bson import ObjectId
 
-from config import user_collection
+from config.db_config import user_collection
 from config.models.admin_withdrawal_request_model import list_withdrawal_requests, reject_withdrawal_request, \
     complete_withdrawal_request
-from core.utils.core_enums import NotificationRecipientType, NotificationType
+from core.utils.core_enums import NotificationRecipientType, NotificationType, TokenTransactionType, \
+    TokenTransactionReason
 from core.utils.exceptions import CustomValidationError
 from core.utils.helper import serialize_datetime_fields
 from core.utils.pagination import StandardResultsSetPagination
 from core.utils.response_mixin import CustomResponseMixin
+from core.utils.transaction_helper import update_user_tokens_and_history
 from schemas.withdrawal_request_schema import AdminWithdrawalCompleteRequestModel
 from services.notification_service import send_notification
 from services.translation import translate_message
@@ -107,6 +109,18 @@ async def complete_withdrawal_request_controller(
         )
 
         user = await user_collection.find_one({"_id": ObjectId(result.get("user_id"))})
+        if not user:
+            return response.error_message(translate_message("USER_NOT_FOUND", lang=lang), data=[], status_code=404)
+
+        await update_user_tokens_and_history(
+            user_id=str(user["_id"]),
+            user_details=user,
+            tokens=int(result['tokens']),
+            transaction_type=TokenTransactionType.WITHDRAW,
+            reason=TokenTransactionReason.TOKEN_WITHDRAWAL,
+            transaction_id=ObjectId(request_id),
+            lang=lang
+        )
         recipient_lang = user.get("lang", "en")
         await send_notification(
             recipient_id=str(user["_id"]),

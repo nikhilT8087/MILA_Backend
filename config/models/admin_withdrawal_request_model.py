@@ -274,5 +274,6 @@ async def complete_withdrawal_request(
         "user_id": str(withdrawal["user_id"]),
         "status": WithdrawalStatus.completed.value,
         "paid_amount": float(paid_amount),
-        "tron_txn_id": payload.tron_txn_id
+        "tron_txn_id": payload.tron_txn_id,
+        "tokens": withdrawal["tokens"],
     }
