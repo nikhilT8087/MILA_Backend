@@ -13,7 +13,8 @@ from api.routes import (
 )
 
 from api.routes.admin import (
-    token_plan_routes, withdrawal_request_routes
+    token_plan_routes, withdrawal_request_routes,
+    event_management_route
 )
 
 from core.utils.exceptions import CustomValidationError, custom_validation_error_handler, validation_exception_handler
@@ -55,6 +56,7 @@ SELFIE_DIR = os.path.join(UPLOAD_DIR, "selfie")
 GIFTS_DIR = os.path.join(PUBLIC_DIR, "gift")
 BANNER_DIR = os.path.join(UPLOAD_DIR, "contest_banner")
 VERIFICATION_SELFIE_DIR = os.path.join(UPLOAD_DIR, "verification_selfie")
+CONTEST_PARTICIPATE_DIR = os.path.join(UPLOAD_DIR, "contest")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(PUBLIC_GALLERY_DIR, exist_ok=True)
@@ -64,6 +66,7 @@ os.makedirs(GIFTS_DIR, exist_ok=True)
 os.makedirs(SELFIE_DIR, exist_ok=True)
 os.makedirs(BANNER_DIR, exist_ok=True)
 os.makedirs(VERIFICATION_SELFIE_DIR, exist_ok=True)
+os.makedirs(CONTEST_PARTICIPATE_DIR, exist_ok=True)
 
 app.mount("/public_gallery", StaticFiles(directory=PUBLIC_GALLERY_DIR))
 app.mount("/private_gallery", StaticFiles(directory=PRIVATE_GALLERY_DIR))
@@ -72,6 +75,7 @@ app.mount("/gifts", StaticFiles(directory=GIFTS_DIR))
 app.mount("/selfie", StaticFiles(directory=SELFIE_DIR), name="selfie")
 app.mount("/contest_banner", StaticFiles(directory=BANNER_DIR))
 app.mount("/verification_selfie",StaticFiles(directory=VERIFICATION_SELFIE_DIR))
+app.mount("/contest",StaticFiles(directory=CONTEST_PARTICIPATE_DIR))
 
 # Health check endpoints
 @app.get("/health")
@@ -245,6 +249,7 @@ app.include_router(user_management.router)
 app.include_router(moderation_route.router , prefix="/moderation")
 
 app.include_router(token_plan_routes.admin_router)
+app.include_router(event_management_route.admin_router)
 app.include_router(withdrawal_request_routes.admin_router)
 
 # Scheduler Instance

@@ -98,6 +98,13 @@ async def verify_reset_password_otp(payload: VerifyResetOtpRequest, lang: str = 
 async def reset_password(payload: ResetPasswordRequest, lang: str = "en"):
     return await reset_password_controller(payload, lang)
 
+@router.post("/forgot-password/resend-otp", response_model=Response)
+async def resend_forgot_password_otp(
+    payload: ForgotPasswordRequest,
+    lang: str = "en"
+):
+    return await resend_forgot_password_otp_controller(payload, lang)
+
 @router.get("/{user_id}", response_model=Response)
 async def get_user_by_id(
     user_id: str,
