@@ -408,7 +408,13 @@
   "REPORT_NOT_FOUND": "Signalement introuvable",
   "REPORT_DETAILS_FETCHED_SUCCESSFULLY": "Détails du signalement récupérés avec succès",
   "FAILED_TO_FETCH_REPORT_DETAILS": "Échec de la récupération des détails du signalement",
-
+  "VERIFY_PROFILE_TO_PARTICIPATE": "Vérifiez votre profil pour participer",
+  "CONTEST_NOT_FOUND_OR_INACTIVE": "Concours introuvable ou inactif",
+  "INVALID_CONTEST_HISTORY": "Historique du concours invalide",
+  "ALREADY_PARTICIPATED": "Déjà participé",
+  "IMAGES_UPLOADING_LIMIT_EXCEEDED": "Limite de téléchargement d'images dépassée",
+  "TOKEN_DEBIT_FAILED": "Échec du débit par jeton",
+  "CONTEST_PARTICIPATION_SUCCESSFUL": "Participation au concours réussie",
   "PLEASE_ENTER_A_VALID_PRICE": "Veuillez saisir un prix valide",
   "ONLY_NUMERIC_VALUES_ALLOWED": "Seules les valeurs numériques sont autorisées.",
 

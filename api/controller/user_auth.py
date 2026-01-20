@@ -516,6 +516,47 @@ async def reset_password_controller(payload, lang):
 
     return response.success_message(translate_message("PASSWORD_RESET_SUCCESSFULLY", lang=lang), status_code=200)
 
+async def resend_forgot_password_otp_controller(payload, lang):
+    email = payload.email
+
+    # Step 1: Check user exists
+    user = await user_collection.find_one({"email": email})
+    if not user:
+        return response.error_message(
+            translate_message("NO_ACCOUNT_FOUND_WITH_EMAIL", lang=lang),
+            status_code=404
+        )
+
+    otp_key = f"reset:{email}:otp"
+    resend_key = f"reset:{email}:resend"
+
+    # Step 2: Optional rate limit (1 resend per 60 seconds)
+    resend_block = await redis_client.get(resend_key)
+    if resend_block:
+        return response.error_message(
+            translate_message("OTP_RESEND_TOO_SOON", lang=lang),
+            status_code=429
+        )
+
+    # Step 3: Generate new OTP
+    otp = generate_verification_code()
+
+    # Step 4: Store OTP again (5 minutes)
+    await redis_client.setex(otp_key, 300, otp)
+
+    # Step 5: Set resend lock (60 seconds)
+    await redis_client.setex(resend_key, 60, "1")
+
+    # Step 6: Send email
+    subject, body = reset_password_otp_template(user["username"], otp)
+    await send_email(email, subject, body, is_html=True)
+
+    return response.success_message(
+        translate_message("OTP_RESENT_SUCCESSFULLY", lang=lang),
+        data=[],
+        status_code=200
+    )
+
 async def get_user_by_id_controller(user_id: str, lang: str):
     if not ObjectId.is_valid(user_id):
         return response.error_message(translate_message("INVALID_USER_ID", lang=lang), status_code=400)

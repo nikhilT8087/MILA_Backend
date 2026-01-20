@@ -13,7 +13,7 @@ from core.utils.response_mixin import CustomResponseMixin
 from enum import Enum
 import asyncio
 import re
-
+from config.models.user_token_history_model import *
 
 response = CustomResponseMixin()
 
@@ -244,3 +244,47 @@ async def get_users_list(
 
     return users, total
 
+async def get_user_token_balance(user_id: str) -> int:
+    user = await user_collection.find_one(
+        {"_id": ObjectId(user_id)},
+        {"tokens": 1}
+    )
+    return int(user.get("tokens", 0)) if user else 0
+
+async def debit_user_tokens(
+    user_id: str,
+    amount: int,
+    reason: str
+):
+    balance_before = await get_user_token_balance(user_id)
+
+    if balance_before < amount:
+        return None, balance_before
+
+    balance_after = balance_before - amount
+
+    # Atomic update
+    await user_collection.update_one(
+        {
+            "_id": ObjectId(user_id),
+            "tokens": {"$gte": amount}
+        },
+        {
+            "$inc": {"tokens": -amount},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+
+    # Token history entry
+    await create_user_token_history(
+        CreateTokenHistory(
+            user_id=user_id,
+            delta=-amount,
+            type=TokenTransactionType.DEBIT,
+            reason=reason,
+            balance_before=str(balance_before),
+            balance_after=str(balance_after)
+        )
+    )
+
+    return balance_after, balance_before
