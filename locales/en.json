@@ -400,6 +400,13 @@
   "REPORT_NOT_FOUND": "Report not found",
   "REPORT_DETAILS_FETCHED_SUCCESSFULLY": "Report details fetched successfully",
   "FAILED_TO_FETCH_REPORT_DETAILS": "Failed to fetch report details",
+  "VERIFY_PROFILE_TO_PARTICIPATE": "Verify profile to participate",
+  "CONTEST_NOT_FOUND_OR_INACTIVE": "Contest not found or inactive",
+  "INVALID_CONTEST_HISTORY": "Invalid contest history",
+  "ALREADY_PARTICIPATED": "Already participated",
+  "IMAGES_UPLOADING_LIMIT_EXCEEDED": "Images uploading limit exceeded",
+  "TOKEN_DEBIT_FAILED": "Token debit failed",
+  "CONTEST_PARTICIPATION_SUCCESSFUL": "Contest participation successful",
 
   "PLEASE_ENTER_A_VALID_PRICE": "Please enter a valid price",
   "ONLY_NUMERIC_VALUES_ALLOWED": "Only numeric values allowed",
