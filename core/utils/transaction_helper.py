@@ -597,3 +597,67 @@ def _raise_invalid_tron_address(lang: str):
         data=[],
         status_code=400
     )
+
+async def update_user_tokens_and_history(
+    user_id: str,
+    user_details: Dict[str, Any],
+    tokens: int,
+    transaction_type: TokenTransactionType,
+    reason: TokenTransactionReason,
+    transaction_id: ObjectId,
+    lang: str
+) -> None:
+    """
+    Update user token balance and create token transaction history.
+
+    Supports CREDIT, DEBIT, WITHDRAW operations.
+
+    :param user_id: User ID
+    :param user_details: Current user document
+    :param tokens: Number of tokens involved (positive integer)
+    :param transaction_type: CREDIT / DEBIT / WITHDRAW
+    :param reason: Reason for token change
+    :param transaction_id: Related transaction ObjectId
+    :param lang: Language
+    """
+
+    if tokens <= 0:
+        raise ValueError("Tokens must be greater than zero")
+
+    current_tokens = int(user_details.get("tokens") or 0)
+
+    # 🔒 Balance validation for DEBIT / WITHDRAW
+    if transaction_type in (
+        TokenTransactionType.DEBIT,
+        TokenTransactionType.WITHDRAW,
+    ):
+        if current_tokens < tokens:
+            raise response.raise_exception(
+                translate_message(message="INSUFFICIENT_TOKENS",lang=lang),
+                status_code=400
+            )
+        new_balance = current_tokens - tokens
+        delta = -tokens
+    else:  # CREDIT
+        new_balance = current_tokens + tokens
+        delta = tokens
+
+    # 🧾 Token history entry
+    token_history_data = CreateTokenHistory(
+        user_id=str(ObjectId(user_id)),
+        delta=delta,
+        type=transaction_type.value,
+        reason=reason.value,
+        balance_before=str(current_tokens),
+        balance_after=str(new_balance),
+        txn_id=str(transaction_id),
+    )
+
+    # 1️⃣ Save history
+    await create_user_token_history(data=token_history_data)
+
+    # 2️⃣ Update user balance
+    await user_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"tokens": str(new_balance)}}
+    )
