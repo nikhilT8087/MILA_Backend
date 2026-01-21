@@ -466,5 +466,7 @@
   "WITHDRAWAL_REQUEST_APPROVED_SUCCESSFULLY": "Demande de retrait approuvée avec succès.",
   "WITHDRAWAL_REQUEST_NOT_ELIGIBLE_FOR_COMPLETION": "Cette demande de retrait ne peut être approuvée.",
   "WITHDRAWAL_PAID_AMOUNT_MISMATCH": "Le montant payé ne correspond pas au montant de la demande de retrait.",
-  "UNSUPPORTED_PROFILE_IMAGE_TYPE": "Veuillez télécharger une photo de profil au format JPG, JPEG, PNG ou WEBP."
+  "UNSUPPORTED_PROFILE_IMAGE_TYPE": "Veuillez télécharger une photo de profil au format JPG, JPEG, PNG ou WEBP.",
+  "DASHBOARD_FETCHED_SUCCESSFULLY": "Tableau de bord récupéré avec succès",
+  "FAILED_TO_FETCH_DASHBOARD": "Échec de la récupération du tableau de bord"
 }
