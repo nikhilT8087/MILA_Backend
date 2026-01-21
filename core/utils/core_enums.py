@@ -101,3 +101,9 @@ class WithdrawalStatus(str, Enum):
     approved = "approved"
     rejected = "rejected"
     completed = "completed"
+
+class DashboardFilter(str , Enum):
+    Daily = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"

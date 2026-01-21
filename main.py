@@ -14,7 +14,8 @@ from api.routes import (
 
 from api.routes.admin import (
     token_plan_routes, withdrawal_request_routes,
-    event_management_route
+    event_management_route,
+    dashboard_route
 )
 
 from core.utils.exceptions import CustomValidationError, custom_validation_error_handler, validation_exception_handler
@@ -251,6 +252,7 @@ app.include_router(moderation_route.router , prefix="/moderation")
 app.include_router(token_plan_routes.admin_router)
 app.include_router(event_management_route.admin_router)
 app.include_router(withdrawal_request_routes.admin_router)
+app.include_router(dashboard_route.adminrouter)
 
 # Scheduler Instance
 scheduler = BackgroundScheduler()
