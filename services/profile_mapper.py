@@ -10,6 +10,21 @@ async def build_basic_profile_response(user: dict, onboarding: dict, profile_pho
     age = calculate_age(birthdate) if birthdate else None
 
     country_name = await get_country_name_by_id(onboarding.get("country"), countries_collection)
+    preferred_countries = []
+
+    for cid in onboarding.get("preferred_country", []):
+        if not cid:
+            continue
+
+        country = await countries_collection.find_one(
+            {"_id": ObjectId(cid)},
+            {"name": 1, "code": 1}
+        )
+        if country:
+            preferred_countries.append({
+                "id": str(country["_id"]),
+                "name": country["name"],
+            })
 
     return {
         "header": {
@@ -42,7 +57,7 @@ async def build_basic_profile_response(user: dict, onboarding: dict, profile_pho
         "preferences": {
             "hobbies": onboarding.get("passions", []) if onboarding else [],
             "sexual_preferences": onboarding.get("sexual_preferences", []) if onboarding else [],
-            "preferred_country": onboarding.get("preferred_country", []) if onboarding else []
+            "preferred_country": preferred_countries
         }
     }
 
