@@ -484,5 +484,6 @@
 
   "ACCOUNT_NOT_FOUND": "Account not found",
   "VERIFICATION_ALREADY_PENDING": "Verification already pending",
-  "VERIFICATION_NOT_ALLOWED": "Verification not allowed"
+  "VERIFICATION_NOT_ALLOWED": "Verification not allowed",
+  "DAILY_LIMIT_REACHED":"You’ve reached today’s limit of 10 actions. Upgrade to Premium to continue."
 }
