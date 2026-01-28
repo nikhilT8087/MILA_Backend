@@ -18,6 +18,7 @@ from services.translation import translate_message
 from core.utils.core_enums import MembershipType
 from core.utils.age_calculation import calculate_age
 from api.controller.files_controller import generate_file_url
+from core.utils.action_limit import check_daily_action_limit
 
 response = CustomResponseMixin()
 
@@ -25,6 +26,9 @@ response = CustomResponseMixin()
 # function help to add user to favorites collection
 async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
 
+    limit_check = await check_daily_action_limit(user_id, lang)
+    if limit_check:
+        return limit_check
     # ------------------ PREMIUM VALIDATION ------------------
     user = await user_collection.find_one(
         {"_id": ObjectId(user_id)},
@@ -106,7 +110,9 @@ async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
 
 # Function to handle like of the users.
 async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
-
+    limit_check = await check_daily_action_limit(user_id, lang)
+    if limit_check:
+        return limit_check
     # Cannot like self
     if user_id == liked_user_id:
         return response.error_message(
@@ -229,7 +235,9 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
 
 # Function to pass the user.
 async def pass_user(user_id: str, passed_user_id: str, lang: str = "en"):
-
+    limit_check = await check_daily_action_limit(user_id, lang)
+    if limit_check:
+        return limit_check
     # Cannot pass self
     if user_id == passed_user_id:
         return response.error_message(
