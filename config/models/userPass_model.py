@@ -9,7 +9,8 @@ from config.db_config import (
     user_passed_hostory,
     user_passed_hostory,
     onboarding_collection,
-    file_collection
+    file_collection,
+    daily_action_history
 )
 from core.utils.helper import serialize_datetime_fields
 from core.utils.response_mixin import CustomResponseMixin
@@ -18,18 +19,13 @@ from services.translation import translate_message
 from core.utils.core_enums import MembershipType
 from core.utils.age_calculation import calculate_age
 from api.controller.files_controller import generate_file_url
-from core.utils.action_limit import check_daily_action_limit
+from core.utils.action_limit import check_daily_action_limit , increment_daily_counter
 
 response = CustomResponseMixin()
 
 
 # function help to add user to favorites collection
 async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
-
-    limit_check = await check_daily_action_limit(user_id, lang)
-    if limit_check:
-        return limit_check
-    # ------------------ PREMIUM VALIDATION ------------------
     user = await user_collection.find_one(
         {"_id": ObjectId(user_id)},
         {"membership_type": 1}
@@ -41,6 +37,14 @@ async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
             status_code=404
         )
 
+    can_perform, total, error_key = await check_daily_action_limit(user_id)
+
+    if not can_perform:
+        return response.error_message(
+            translate_message(error_key, lang),
+            data=[{"can_perform_action": False}],
+            status_code=400
+        )
     # ------------------ SELF CHECK ------------------
     if user_id == favorite_user_id:
         return response.error_message(
@@ -82,7 +86,7 @@ async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
         return response.error_message(
             translate_message("USER_ALREADY_IN_FAVORITES", lang),
             data=[],
-            status_code=200
+            status_code=400
         )
 
     await favorite_collection.update_one(
@@ -98,8 +102,11 @@ async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
         upsert=True
     )
 
+    await increment_daily_counter(user_id, "favorite")
+
     response_data = serialize_datetime_fields({
-        "favorite_user_id": favorite_user_id
+        "favorite_user_id": favorite_user_id,
+        "can_perform_action": True
     })
 
     return response.success_message(
@@ -110,9 +117,16 @@ async def add_to_fav(user_id: str, favorite_user_id: str, lang: str = "en"):
 
 # Function to handle like of the users.
 async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
-    limit_check = await check_daily_action_limit(user_id, lang)
-    if limit_check:
-        return limit_check
+
+    can_perform, total, error_key = await check_daily_action_limit(user_id)
+
+    if not can_perform:
+        return response.error_message(
+            translate_message(error_key, lang),
+            data=[{"can_perform_action": False}],
+            status_code=400
+        )
+
     # Cannot like self
     if user_id == liked_user_id:
         return response.error_message(
@@ -175,6 +189,8 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
         upsert=True
     )
 
+    await increment_daily_counter(user_id,"like")
+
     # --------------------------------------------------
     # 2 CHECK MUTUAL LIKE
     # --------------------------------------------------
@@ -229,15 +245,23 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
         ),
         data=[{
             "liked_user_id": liked_user_id,
-            "is_match": is_match
+            "is_match": is_match,
+            "can_perform_action": True
         }]
     )
 
 # Function to pass the user.
 async def pass_user(user_id: str, passed_user_id: str, lang: str = "en"):
-    limit_check = await check_daily_action_limit(user_id, lang)
-    if limit_check:
-        return limit_check
+
+    can_perform, total, error_key = await check_daily_action_limit(user_id)
+
+    if not can_perform:
+        return response.error_message(
+            translate_message(error_key, lang),
+            data=[{"can_perform_action": False}],
+            status_code=400
+        )
+
     # Cannot pass self
     if user_id == passed_user_id:
         return response.error_message(
@@ -285,10 +309,13 @@ async def pass_user(user_id: str, passed_user_id: str, lang: str = "en"):
         upsert=True
     )
 
+    await increment_daily_counter(user_id,"pass")
+
     return response.success_message(
         translate_message("USER_PASSED_SUCCESSFULLY", lang),
         data=[{
-            "passed_user_id": passed_user_id
+            "passed_user_id": passed_user_id,
+            "can_perform_action": True
         }]
     )
 
