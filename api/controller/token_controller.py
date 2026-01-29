@@ -2,8 +2,9 @@ from typing import Optional
 
 from bson import ObjectId
 
+from config.db_config import user_collection
 from core.utils.core_enums import TransactionType, TransactionStatus, TokenTransactionType, TokenPlanStatus, \
-    WithdrawalStatus
+    WithdrawalStatus, TokenTransactionReason
 from core.utils.exceptions import CustomValidationError
 from core.utils.pagination import StandardResultsSetPagination
 from config.models.user_token_history_model import get_user_token_history
@@ -16,7 +17,7 @@ from core.utils.helper import serialize_datetime_fields, convert_objectid_to_str
 from core.utils.transaction_helper import get_transaction_details, validate_destination_wallet, \
     validate_transaction_status, build_transaction_model, handle_full_payment, mark_full_payment_received, \
     handle_token_full_payment, mark_token_full_payment_received, validate_withdrawal_tokens, \
-    calculate_tokens_based_on_amount, is_valid_tron_address
+    calculate_tokens_based_on_amount, is_valid_tron_address, update_user_tokens_and_history
 from config.models.transaction_models import (store_transaction_details, get_existing_transaction,
                                               get_subscription_payment_details, update_transaction_details,
                                               store_withdrawn_token_request, ensure_no_pending_token_withdrawal,
@@ -217,7 +218,7 @@ async def request_withdrawn_token_amount(request: WithdrawnTokenRequestModel, us
                 data=[],
                 status_code=400
             )
-        new_balance = int(available_tokens.get("tokens", "0")) - int(withdrawn_token)
+
         withdrawn_request_data = TokenWithdrawTransactionCreateModel(
             user_id=str(ObjectId(user_id)),
             request_amount=request.amount,
@@ -230,7 +231,16 @@ async def request_withdrawn_token_amount(request: WithdrawnTokenRequestModel, us
         doc = serialize_datetime_fields(doc)
         doc = convert_objectid_to_str(doc)
 
-        await update_user_token_balance(user_id, new_balance)
+        user = await user_collection.find_one({"_id": ObjectId(user_id)})
+        await update_user_tokens_and_history(
+            user_id=str(user["_id"]),
+            user_details=user,
+            tokens=int(withdrawn_token),
+            transaction_type=TokenTransactionType.WITHDRAW,
+            reason=TokenTransactionReason.TOKEN_WITHDRAWAL,
+            transaction_id=ObjectId(doc["_id"]),
+            lang=lang
+        )
 
         return response.success_message(
             translate_message("WITHDRAWAL_REQUEST_SUBMITTED", lang=lang),
