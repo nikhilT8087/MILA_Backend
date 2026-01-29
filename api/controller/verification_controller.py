@@ -271,8 +271,8 @@ async def approve_verification(
         recipient_id=user_id,
         recipient_type=NotificationRecipientType.USER,
         notification_type=NotificationType.VERIFICATION_APPROVED,
-        title=translate_message("PUSH_TITLE_VERIFICATION_APPROVED", lang),
-        message=translate_message("PUSH_MESSAGE_VERIFICATION_APPROVED", lang),
+        title="PUSH_TITLE_VERIFICATION_APPROVED",
+        message="PUSH_MESSAGE_VERIFICATION_APPROVED",
         reference={
             "entity": "verification",
             "entity_id": user_id
@@ -360,8 +360,8 @@ async def reject_verification(
         recipient_id=user_id,
         recipient_type=NotificationRecipientType.USER,
         notification_type=NotificationType.VERIFICATION_REJECTED,
-        title=translate_message("PUSH_TITLE_VERIFICATION_REJECTED", lang),
-        message=translate_message("PUSH_MESSAGE_VERIFICATION_REJECTED", lang),
+        title="PUSH_TITLE_VERIFICATION_REJECTED",
+        message="PUSH_MESSAGE_VERIFICATION_REJECTED",
         reference={
             "entity": "verification",
             "entity_id": user_id

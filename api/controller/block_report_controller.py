@@ -77,8 +77,8 @@ async def block_user_controller(
         recipient_id=admin_id,
         recipient_type=NotificationRecipientType.ADMIN,
         notification_type=NotificationType.BLOCK,
-        title=translate_message("PUSH_TITLE_USER_BLOCKED", lang),
-        message=translate_message("PUSH_MESSAGE_USER_BLOCKED", lang),
+        title="PUSH_TITLE_USER_BLOCKED",
+        message="PUSH_MESSAGE_USER_BLOCKED",
         reference={
             "entity": "user_block",
             "entity_id": blocked_id,
@@ -194,8 +194,8 @@ async def report_user_controller(
         recipient_id=admin_id,
         recipient_type=NotificationRecipientType.ADMIN,
         notification_type=NotificationType.REPORT,
-        title=translate_message("PUSH_TITLE_USER_REPORTED", lang),
-        message=translate_message("PUSH_MESSAGE_USER_REPORTED", lang),
+        title="PUSH_TITLE_USER_REPORTED",
+        message="PUSH_MESSAGE_USER_REPORTED",
         reference={
             "entity": "user_report",
             "entity_id": reported_id,

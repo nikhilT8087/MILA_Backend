@@ -249,8 +249,8 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
                     recipient_id=liked_user_id,
                     recipient_type=NotificationRecipientType.USER,
                     notification_type=NotificationType.MATCH,
-                    title=translate_message("PUSH_TITLE_MATCHED", user_2_lang),
-                    message=translate_message("PUSH_MESSAGE_MATCHED", user_2_lang),
+                    title="PUSH_TITLE_MATCHED",
+                    message="PUSH_MESSAGE_MATCHED",
                     reference={
                         "entity": "match",
                         "entity_id": user_id
@@ -264,8 +264,8 @@ async def like_user(user_id: str, liked_user_id: str, lang: str = "en"):
                     recipient_id=user_id,
                     recipient_type=NotificationRecipientType.USER,
                     notification_type=NotificationType.MATCH,
-                    title=translate_message("PUSH_TITLE_MATCHED", user_1_lang),
-                    message=translate_message("PUSH_MESSAGE_MATCHED", user_1_lang),
+                    title="PUSH_TITLE_MATCHED",
+                    message="PUSH_MESSAGE_MATCHED",
                     reference={
                         "entity": "match",
                         "entity_id": liked_user_id
