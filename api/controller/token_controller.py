@@ -21,7 +21,7 @@ from config.models.transaction_models import (store_transaction_details, get_exi
                                               get_subscription_payment_details, update_transaction_details,
                                               store_withdrawn_token_request, ensure_no_pending_token_withdrawal,
                                               get_withdraw_token_transactions)
-from config.models.user_models import get_user_details
+from config.models.user_models import get_user_details, update_user_token_balance
 from core.utils.response_mixin import CustomResponseMixin
 response = CustomResponseMixin()
 
@@ -217,6 +217,7 @@ async def request_withdrawn_token_amount(request: WithdrawnTokenRequestModel, us
                 data=[],
                 status_code=400
             )
+        new_balance = int(available_tokens.get("tokens", "0")) - int(withdrawn_token)
         withdrawn_request_data = TokenWithdrawTransactionCreateModel(
             user_id=str(ObjectId(user_id)),
             request_amount=request.amount,
@@ -228,6 +229,9 @@ async def request_withdrawn_token_amount(request: WithdrawnTokenRequestModel, us
         doc = await store_withdrawn_token_request(doc=withdrawn_request_data)
         doc = serialize_datetime_fields(doc)
         doc = convert_objectid_to_str(doc)
+
+        await update_user_token_balance(user_id, new_balance)
+
         return response.success_message(
             translate_message("WITHDRAWAL_REQUEST_SUBMITTED", lang=lang),
             data=doc

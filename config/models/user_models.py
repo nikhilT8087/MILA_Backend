@@ -289,3 +289,27 @@ async def debit_user_tokens(
     )
 
     return balance_after, balance_before
+
+
+async def update_user_token_balance(
+    user_id: str,
+    new_balance: int
+) -> None:
+    """
+    Update the user's token balance.
+
+    :param user_id: User ID (str or ObjectId)
+    :param new_balance: New token balance (must be >= 0)
+    """
+
+    if new_balance < 0:
+        raise ValueError("Token balance cannot be negative")
+
+    await user_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "tokens": str(new_balance)
+            }
+        }
+    )
