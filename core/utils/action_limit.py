@@ -2,9 +2,7 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from config.db_config import (
     user_collection ,
-    user_like_history ,
-    user_passed_hostory ,
-    favorite_collection
+    daily_action_history
 )
 from core.utils.core_enums import MembershipType
 from bson import ObjectId
@@ -17,53 +15,59 @@ response = CustomResponseMixin()
 
 DAILY_FREE_LIMIT = settings.DAILY_FREE_LIMIT
 
-async def check_daily_action_limit(user_id: str, lang: str = "en"):
+def today_bucket():
+    return datetime.utcnow().strftime("%Y-%m-%d")
 
+
+async def increment_daily_counter(user_id: str, action: str):
+    today = today_bucket()
+
+    inc_map = {
+        "like": {"like_count": 1, "total_count": 1},
+        "pass": {"pass_count": 1, "total_count": 1},
+        "favorite": {"favourite_count": 1, "total_count": 1},
+    }
+
+    await daily_action_history.update_one(
+        {
+            "user_id": user_id,
+            "date_bucket": today
+        },
+        {
+            "$inc": inc_map[action],
+            "$set": {"updated_at": datetime.utcnow()},
+            "$setOnInsert": {
+                "user_id": user_id,
+                "date_bucket": today,
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+async def check_daily_action_limit(user_id: str):
     user = await user_collection.find_one(
         {"_id": ObjectId(user_id)},
         {"membership_type": 1}
     )
 
     if not user:
-        return response.error_message(
-            translate_message("USER_NOT_FOUND", lang),
-            data=[],
-            status_code=404
-        )
+        return False, 0, "USER_NOT_FOUND"
 
+    # Premium users → unlimited
     if user.get("membership_type") == MembershipType.PREMIUM.value:
-        return None
+        return True, 0, None
 
-    start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = start_of_day + timedelta(days=1)
+    today = today_bucket()
 
-    # likes done by this user
-    liked_count = await user_like_history.count_documents({
-        "liked_by_user_ids": user_id,
-        "updated_at": {"$gte": start_of_day, "$lt": end_of_day}
-    })
+    counter_doc = await daily_action_history.find_one(
+        {"user_id": user_id, "date_bucket": today},
+        {"total_count": 1}
+    )
 
-    # passes done by this user
-    passed_doc = await user_passed_hostory.find_one({
-        "user_id": user_id,
-        "updated_at": {"$gte": start_of_day, "$lt": end_of_day}
-    })
-    passed_count = len(passed_doc.get("passed_user_ids", [])) if passed_doc else 0
+    total = counter_doc.get("total_count", 0) if counter_doc else 0
 
-    # favorites done by this user
-    fav_doc = await favorite_collection.find_one({
-        "user_id": user_id,
-        "updated_at": {"$gte": start_of_day, "$lt": end_of_day}
-    })
-    fav_count = len(fav_doc.get("favorite_user_ids", [])) if fav_doc else 0
+    if total >= DAILY_FREE_LIMIT:
+        return False, total, "DAILY_LIMIT_REACHED"
 
-    total_actions = liked_count + passed_count + fav_count
-
-    if total_actions >= 10:
-        return response.error_message(
-            translate_message("DAILY_LIMIT_REACHED", lang),
-            data=[],
-            status_code=400
-        )
-
-    return None
+    return True, total, None
