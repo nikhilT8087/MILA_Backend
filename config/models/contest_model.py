@@ -153,10 +153,11 @@ async def get_contests_paginated(
         contest_collection
         .find(query)
         .sort("created_at", -1)
-        .skip(pagination.skip)
-        .limit(pagination.limit)
     )
 
+    if pagination.limit is not None:
+        cursor = cursor.skip(pagination.skip).limit(pagination.limit)
+        
     results = []
 
     async for contest in cursor:
@@ -179,3 +180,261 @@ async def get_contests_paginated(
         results.append(card.dict())
 
     return results, total
+
+async def fetch_contest_by_id(contest_id: str):
+    return await contest_collection.find_one(
+        {"_id": ObjectId(contest_id), "is_active": True}
+    )
+
+async def fetch_active_contest_history(contest_id: str):
+    return await contest_history_collection.find_one(
+        {"contest_id": contest_id, "is_active": True}
+    )
+
+
+async def fetch_participant_avatars(contest_id, contest_history_id, limit=5):
+    cursor = contest_participant_collection.find(
+        {
+            "contest_id": contest_id,
+            "contest_history_id": contest_history_id
+        }
+    )
+
+    seen_users = set()
+    avatars = []
+
+    async for p in cursor:
+        if p["user_id"] in seen_users:
+            continue
+
+        avatar = await resolve_user_avatar(p["user_id"])
+        if avatar:
+            avatars.append(avatar)
+            seen_users.add(p["user_id"])
+
+        if len(avatars) == limit:
+            break
+
+    return avatars
+
+async def fetch_current_standings(
+    contest_id: str,
+    contest_history
+):
+    if contest_history["status"] not in [
+        ContestStatus.voting_started,
+        ContestStatus.winner_announced
+    ]:
+        return []
+
+    return await get_leaderboard(
+        contest_id,
+        str(contest_history["_id"])
+    )
+
+
+async def is_user_participant(user_id: str, contest_history_id: str):
+    return await contest_participant_collection.find_one({
+        "contest_history_id": contest_history_id,
+        "user_id": user_id
+    })
+
+async def resolve_cta_state(contest, contest_history, current_user):
+    user_id = str(current_user["_id"])
+
+    if contest_history["status"] == ContestStatus.registration_open:
+        already_participated = await contest_participant_collection.find_one({
+            "contest_id": str(contest["_id"]),
+            "user_id": user_id
+        })
+
+        if already_participated:
+            return {
+                "can_participate": False,
+                "can_vote": False,
+                "reason": "ALREADY_PARTICIPATED"
+            }
+
+        return {"can_participate": True, "can_vote": False}
+
+    if contest_history["status"] == ContestStatus.voting_started:
+        if await is_user_participant(user_id, str(contest_history["_id"])):
+            return {
+                "can_participate": False,
+                "can_vote": False,
+                "reason": "PARTICIPANT_CANNOT_VOTE"
+            }
+
+        return {"can_participate": False, "can_vote": True}
+
+    return {"can_participate": False, "can_vote": False}
+
+async def resolve_user_avatar(user_id: str) -> dict | None:
+    onboarding = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {"profile_photo": 1, "selfie_image": 1}
+    )
+
+    file_id = (
+        onboarding.get("profile_photo")
+        or onboarding.get("selfie_image")
+        if onboarding else None
+    )
+
+    if not file_id:
+        return None
+
+    file_doc = await file_collection.find_one(
+        {"_id": ObjectId(file_id)},
+        {"storage_key": 1, "storage_backend": 1}
+    )
+
+    if not file_doc:
+        return None
+
+    url = await generate_file_url(
+        storage_key=file_doc["storage_key"],
+        backend=file_doc["storage_backend"]
+    )
+
+    return {
+        "user_id": user_id,
+        "avatar_url": url
+    }
+
+async def get_leaderboard(
+    contest_id: str,
+    contest_history_id: str,
+    limit: int = 3
+):
+    cursor = (
+        contest_participant_collection
+        .find(
+            {
+                "contest_id": contest_id,
+                "contest_history_id": str(contest_history_id)
+            }
+        )
+        .sort("total_votes", -1)
+        .limit(limit)
+    )
+
+    leaderboard = []
+    rank = 1
+
+    async for participant in cursor:
+        avatar = await resolve_user_avatar(participant["user_id"])
+
+        leaderboard.append({
+            "rank": rank,
+            "user_id": participant["user_id"],
+            "total_votes": participant.get("total_votes", 0),
+            "avatar": avatar
+        })
+        rank += 1
+
+    return leaderboard
+
+async def fetch_contest_participants(
+    contest_id: str,
+    skip: int = 0,
+    limit: Optional[int] = None
+):
+    cursor = contest_participant_collection.find(
+        {
+            "contest_id": contest_id,
+            "is_deleted": {"$ne": True}
+        }
+    )
+
+    # Apply pagination ONLY when page_size is provided
+    if limit is not None:
+        cursor = cursor.skip(skip).limit(limit)
+
+    participants = []
+    async for p in cursor:
+        participants.append(p)
+
+    return participants
+
+async def is_user_already_participant(
+    contest_id: str,
+    contest_history_id: str,
+    user_id: str
+):
+    return await contest_participant_collection.find_one({
+        "contest_id": contest_id,
+        "contest_history_id": contest_history_id,
+        "user_id": user_id
+    })
+
+async def create_contest_participant(data: dict):
+    result = await contest_participant_collection.insert_one(data)
+    return str(result.inserted_id)
+
+async def increment_participant_count(contest_history_id: str):
+    await contest_history_collection.update_one(
+        {"_id": ObjectId(contest_history_id)},
+        {"$inc": {"total_participants": 1}}
+    )
+
+def resolve_badge(rank: int | None):
+    if rank == 1:
+        return {"type": "gold", "label": "Top 1"}
+    if rank == 2:
+        return {"type": "silver", "label": "Top 2"}
+    if rank == 3:
+        return {"type": "bronze", "label": "Top 3"}
+    return None
+
+async def get_participant_by_user(
+    contest_id: str,
+    contest_history_id: str,
+    participant_user_id: str
+):
+    return await contest_participant_collection.find_one({
+        "contest_id": contest_id,
+        "contest_history_id": contest_history_id,
+        "user_id": participant_user_id
+    })
+
+async def get_user_vote_count(
+    contest_id: str,
+    contest_history_id: str,
+    voter_user_id: str
+) -> int:
+    return await contest_vote_collection.count_documents({
+        "contest_id": contest_id,
+        "contest_history_id": contest_history_id,
+        "voter_user_id": voter_user_id
+    })
+
+async def has_user_voted_for_participant(
+    contest_id: str,
+    contest_history_id: str,
+    participant_id: str,
+    voter_user_id: str
+):
+    return await contest_vote_collection.find_one({
+        "contest_id": contest_id,
+        "contest_history_id": contest_history_id,
+        "participant_id": participant_id,
+        "voter_user_id": voter_user_id
+    })
+
+async def create_vote_entry(data: dict):
+    await contest_vote_collection.insert_one(data)
+
+async def increment_vote_counts(
+    participant_id: ObjectId,
+    contest_history_id: str
+):
+    await contest_participant_collection.update_one(
+        {"_id": participant_id},
+        {"$inc": {"total_votes": 1}}
+    )
+
+    await contest_history_collection.update_one(
+        {"_id": ObjectId(contest_history_id)},
+        {"$inc": {"total_votes": 1}}
+    )

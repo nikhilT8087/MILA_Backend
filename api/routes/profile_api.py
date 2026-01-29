@@ -39,7 +39,7 @@ async def upload_public_gallery(
 @router.post("/upload_private_gallery", response_model=Response)
 async def upload_private_gallery(
     image: List[UploadFile] = File(...),
-    price: Optional[int] = Form(None),
+    price: Optional[str] = Form(None),
     current_user: dict = Depends(UserPermission(["user"])),
     lang: str = Query("en")
 ):
@@ -97,3 +97,30 @@ async def change_language(
     lang: str = Query("en")
 ):
     return await change_language_controller(payload, current_user, lang)
+
+@router.delete("/gallery/public/{file_id}", response_model=Response)
+async def delete_public_gallery_image(
+    file_id: str,
+    current_user: dict = Depends(UserPermission(["user"])),
+    lang: str = Query("en")
+):
+    return await delete_gallery_image_controller(
+        file_id=file_id,
+        gallery_field="public_gallery",
+        current_user=current_user,
+        lang=lang
+    )
+
+
+@router.delete("/gallery/private/{file_id}", response_model=Response)
+async def delete_private_gallery_image(
+    file_id: str,
+    current_user: dict = Depends(UserPermission(["user"])),
+    lang: str = Query("en")
+):
+    return await delete_gallery_image_controller(
+        file_id=file_id,
+        gallery_field="private_gallery",
+        current_user=current_user,
+        lang=lang
+    )

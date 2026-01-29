@@ -29,7 +29,16 @@ async def get_user_profile_controller(current_user: dict, lang: str = "en"):
     )
     if not user:
         return response.error_message(translate_message("USER_NOT_FOUND", lang=lang), data=[], status_code=404)
+    viewer_unlocked_images = set()
 
+    if user:
+        viewer_db = await user_collection.find_one(
+            {"_id": user["_id"]},
+            {"unlocked_images": 1}
+        )
+        viewer_unlocked_images = set(viewer_db.get("unlocked_images", []))
+
+    is_owner = str(user["_id"]) == str(current_user["_id"])
     onboarding = await onboarding_collection.find_one(
         {"user_id": str(user["_id"])}
     )
@@ -40,18 +49,32 @@ async def get_user_profile_controller(current_user: dict, lang: str = "en"):
     verification_status = user.get("is_verified")
     membership_type = user.get("membership_type", "free")
 
-    if verification_status == True:
-        screen_state = "verified_user"
-    elif verification_status == False:
-        screen_state = "unverified_rejected"
-    else:
-        screen_state = "unverified_pending"
+    verification_record = await verification_collection.find_one(
+        {"user_id": str(user["_id"])},
+        sort=[("created_at", -1)]
+    )
+
+    screen_state = "unverified_pending"
+    show_badge = False
+    show_retry = False
+
+    if verification_record:
+        if verification_record["status"] == "approved":
+            screen_state = "verified_user"
+            show_badge = True
+        elif verification_record["status"] == "rejected":
+            screen_state = "unverified_rejected"
+            show_retry = True
 
     public_gallery_raw = onboarding.get("public_gallery", []) if onboarding else []
     private_gallery_raw = onboarding.get("private_gallery", []) if onboarding else []
 
-    public_gallery = await resolve_gallery_items(public_gallery_raw)
-    private_gallery = await resolve_gallery_items(private_gallery_raw)
+    public_gallery = await resolve_public_gallery_items(public_gallery_raw)
+    private_gallery = await resolve_private_gallery_items(
+        private_gallery_raw,
+        viewer_unlocked_images=viewer_unlocked_images,
+        is_owner=is_owner
+    )
 
     private_gallery_locked = membership_type == "free"
 
@@ -66,9 +89,9 @@ async def get_user_profile_controller(current_user: dict, lang: str = "en"):
             "about": onboarding.get("bio") if onboarding else None,
             "screen_state": screen_state,
             "verification": {
-                "status": verification_status,
-                "show_badge": verification_status == "verified",
-                "show_retry": verification_status == "rejected",
+                "status": screen_state,
+                "show_badge": show_badge,
+                "show_retry": show_retry,
             },
             "tokens": tokens,
             "membership": {
@@ -113,10 +136,24 @@ async def upload_public_gallery_controller(images, current_user, lang: str = "en
     if not images:
         return response.error_message(translate_message("PUBLIC_GALLERY_IMAGES_REQUIRED", lang=lang), data=[], status_code=400)
 
-    if len(images) > 5:
+    user_id = str(current_user["_id"])
+
+    existing_count = await get_gallery_count(
+        user_id=user_id,
+        gallery_field="public_gallery"
+    )
+
+    incoming_count = len(images)
+
+    # Enforce TOTAL limit (existing + new)
+    if existing_count + incoming_count > 5:
         return response.error_message(
             translate_message("PUBLIC_GALLERY_MAX_LIMIT_EXCEEDED", lang=lang),
-            data=[],
+            data={
+                "allowed": max(0, 5 - existing_count),
+                "existing": existing_count,
+                "max_limit": 5
+            },
             status_code=400
         )
 
@@ -140,7 +177,7 @@ async def upload_public_gallery_controller(images, current_user, lang: str = "en
         items=public_items
     )
 
-    resolved_items = await resolve_gallery_items(public_items)
+    resolved_items = await resolve_public_gallery_items(public_items)
 
     return response.success_message(
         translate_message("PUBLIC_GALLERY_IMAGES_UPLOADED_SUCCESSFULLY", lang),
@@ -159,7 +196,19 @@ async def upload_private_gallery_controller(image, price, current_user, lang: st
     - Free users: max 3 images
     - Premium users: max 20 images
     """
-    if len(image) > 1:
+
+    user_id = str(current_user["_id"])
+
+    # Validate user
+    user = await user_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        return response.error_message(
+            translate_message("USER_NOT_FOUND", lang),
+            status_code=404
+        )
+
+    # Only one image allowed
+    if not image or len(image) != 1:
         return response.error_message(
             translate_message(
                 "PLEASE_SELECT_ONE_IMAGE_AT_A_TIME_WITH_ITS_PRICE",
@@ -173,7 +222,22 @@ async def upload_private_gallery_controller(image, price, current_user, lang: st
     if size_error:
         return size_error
     
-    if price is None or price <= 0:
+    # PRICE VALIDATION (string-safe)
+    if price is None or price.strip() == "":
+        return response.error_message(
+            translate_message("PLEASE_ENTER_A_VALID_PRICE", lang),
+            status_code=400
+        )
+
+    if not price.isdigit():
+        return response.error_message(
+            translate_message("ONLY_NUMERIC_VALUES_ALLOWED", lang),
+            status_code=400
+        )
+
+    price = int(price)
+
+    if price <= 0:
         return response.error_message(
             translate_message("PRICE_MUST_BE_GREATER_THAN_ZERO", lang),
             status_code=400
@@ -212,15 +276,32 @@ async def upload_private_gallery_controller(image, price, current_user, lang: st
         items=[private_item]
     )
 
-    resolved = await resolve_gallery_items([private_item])
+    # Generate URL for response (owner → always unlocked)
+    file_doc = await file_collection.find_one(
+        {"_id": ObjectId(private_item["file_id"])}
+    )
+
+    image_url = await generate_file_url(
+        file_doc["storage_key"],
+        file_doc["storage_backend"]
+    )
+
+    # Response payload
+    response_item = {
+        "file_id": private_item["file_id"],
+        "url": image_url,
+        "uploaded_at": private_item["uploaded_at"],
+        "price": private_item["price"],
+        "is_unlocked": True,  # owner always unlocked
+        "remaining_slots": max_limit - (existing_count + 1)
+    }
 
     return response.success_message(
-        translate_message("PRIVATE_GALLERY_IMAGE_UPLOADED_SUCCESSFULLY", lang),
-        data=[serialize_datetime_fields({
-            **resolved[0],
-            "price": price,
-            "remaining_slots": max_limit - (existing_count + 1)
-        })],
+        translate_message(
+            "PRIVATE_GALLERY_IMAGE_UPLOADED_SUCCESSFULLY",
+            lang
+        ),
+        data=[serialize_datetime_fields(response_item)],
         status_code=200
     )
 
@@ -232,7 +313,7 @@ async def get_public_gallery_controller(current_user, lang: str = "en"):
 
     gallery = onboarding.get("public_gallery", []) if onboarding else []
 
-    items = await resolve_gallery_items(gallery)
+    items = await resolve_public_gallery_items(gallery)
 
     response_data = serialize_datetime_fields({
         "count": len(items),
@@ -256,7 +337,11 @@ async def get_private_gallery_controller(current_user, lang: str = "en"):
     membership = current_user.get("membership_type", "free")
     max_limit = 3 if membership == "free" else 20
 
-    items = await resolve_gallery_items(gallery)
+    items = await resolve_private_gallery_items(
+        gallery=gallery,
+        viewer_unlocked_images=set(),
+        is_owner=True
+    )
 
     response_data = serialize_datetime_fields({
         "count": len(items),
@@ -317,5 +402,54 @@ async def change_language_controller(
         data=[{
             "language": payload.language.value
         }],
+        status_code=200
+    )
+
+async def delete_gallery_image_controller(
+    file_id: str,
+    gallery_field: str,
+    current_user: dict,
+    lang: str = "en"
+):
+    user_id = str(current_user["_id"])
+
+    # Validate ObjectId
+    try:
+        ObjectId(file_id)
+    except Exception:
+        return response.error_message(
+            translate_message("INVALID_FILE_ID", lang),
+            status_code=400
+        )
+
+    # Ownership + existence check
+    onboarding = await find_gallery_item(
+        user_id=user_id,
+        gallery_field=gallery_field,
+        file_id=file_id
+    )
+
+    if not onboarding:
+        return response.error_message(
+            translate_message("IMAGE_NOT_FOUND_IN_GALLERY", lang),
+            status_code=404
+        )
+
+    # Remove from gallery
+    await remove_gallery_item(
+        user_id=user_id,
+        gallery_field=gallery_field,
+        file_id=file_id
+    )
+
+    # Soft delete file
+    await soft_delete_file(
+        file_id=file_id,
+        deleted_by=user_id
+    )
+
+    return response.success_message(
+        translate_message("GALLERY_IMAGE_DELETED_SUCCESSFULLY", lang),
+        data=[{"file_id": file_id}],
         status_code=200
     )

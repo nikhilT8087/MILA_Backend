@@ -103,6 +103,8 @@ admin_blocked_users_collection = db["admin_blocked_users_history"]
 deleted_account_collection = db["deleted_accounts"]
 contest_collection = db["contests"]
 contest_participant_collection = db["contests_participants"]
+contest_history_collection = db["contest_history"]
+contest_vote_collection = db["contest_vote"]
 
 async def create_indexes():
     """
@@ -125,10 +127,14 @@ async def create_indexes():
         )
 
         # Matches (prevent duplicate matches)
+        existing_indexes = await user_match_history.index_information()
+        if "idx_unique_user_match" in existing_indexes:
+            await user_match_history.drop_index("idx_unique_user_match")
+
         await user_match_history.create_index(
-            [("user_ids", 1)],
+            [("pair_key", 1)],
             unique=True,
-            name="idx_unique_user_match"
+            name="idx_unique_pair_key"
         )
 
         # Passed users

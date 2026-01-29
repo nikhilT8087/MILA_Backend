@@ -28,7 +28,7 @@ async def validate_image_size(file: UploadFile, lang: str):
         )
     return None
 
-async def resolve_gallery_items(gallery: list):
+async def resolve_public_gallery_items(gallery: list):
     """
     Converts gallery file_ids into URLs
     """
@@ -54,7 +54,41 @@ async def resolve_gallery_items(gallery: list):
             "file_id": file_id,
             "url": url,
             "uploaded_at": item.get("uploaded_at"),
-            "price": item.get("price")
+        })
+
+    return resolved
+
+async def resolve_private_gallery_items(
+    gallery: list,
+    viewer_unlocked_images: set,
+    is_owner: bool
+):
+    resolved = []
+
+    for item in gallery:
+        file_id = item.get("file_id")
+        if not file_id:
+            continue
+
+        file_doc = await file_collection.find_one(
+            {"_id": ObjectId(file_id), "is_deleted": {"$ne": True}}
+        )
+        if not file_doc:
+            continue
+
+        is_unlocked = is_owner or file_id in viewer_unlocked_images
+
+        url = await generate_file_url(
+            file_doc["storage_key"],
+            file_doc["storage_backend"]
+        )
+
+        resolved.append({
+            "file_id": file_id,
+            "url": url,
+            "uploaded_at": item.get("uploaded_at"),
+            "price": item.get("price"),
+            "is_unlocked": is_unlocked
         })
 
     return resolved
@@ -105,4 +139,45 @@ async def append_gallery_items(
             "$set": {"updated_at": datetime.utcnow()}
         },
         upsert=True
+    )
+
+async def get_gallery_count(user_id: str, gallery_field: str) -> int:
+    onboarding = await onboarding_collection.find_one(
+        {"user_id": user_id},
+        {gallery_field: 1}
+    )
+    if not onboarding:
+        return 0
+
+    return len(onboarding.get(gallery_field, []))
+
+async def find_gallery_item(user_id: str, gallery_field: str, file_id: str):
+    return await onboarding_collection.find_one(
+        {
+            "user_id": user_id,
+            f"{gallery_field}.file_id": file_id
+        }
+    )
+
+async def remove_gallery_item(user_id: str, gallery_field: str, file_id: str):
+    return await onboarding_collection.update_one(
+        {"user_id": user_id},
+        {
+            "$pull": {
+                gallery_field: {"file_id": file_id}
+            },
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+
+async def soft_delete_file(file_id: str, deleted_by: str):
+    return await file_collection.update_one(
+        {"_id": ObjectId(file_id)},
+        {
+            "$set": {
+                "is_deleted": True,
+                "deleted_at": datetime.utcnow(),
+                "deleted_by": deleted_by
+            }
+        }
     )

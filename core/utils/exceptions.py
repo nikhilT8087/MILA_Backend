@@ -13,7 +13,7 @@ from typing import Optional
 class CustomValidationError(HTTPException):
     def __init__(self, message: str, data: Optional[dict] = None, status_code: int = 400):
         self.message = message if message else "Something went wrong"
-        self.data = data if isinstance(data, dict) else {}
+        self.data = data if (isinstance(data, dict) or isinstance(data, list)) else {}
         self.success = False
         self.status_code = status_code
 

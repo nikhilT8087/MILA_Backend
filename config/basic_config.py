@@ -59,9 +59,12 @@ class Settings(BaseSettings):
     WALLET_NETWORK:str
     VERIFICATION_REWARD_TOKENS: int
     FIREBASE_CRED_PATH: str
-    MAX_IMAGE_SIZE_MB: int
     MAX_IMAGE_SIZE_BYTES: int
 
+    PUBLIC_DIR: str
+    UPLOAD_DIR: str
+    DAILY_FREE_LIMIT:int
+    
     class ConfigDict:
         env_file = ".env"
         extra = "ignore"

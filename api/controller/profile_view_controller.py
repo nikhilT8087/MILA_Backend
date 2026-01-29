@@ -1,7 +1,7 @@
 #profile_view_controller.py:
 
 from bson import ObjectId
-from config.db_config import countries_collection, private_gallery_purchases_collection, profile_view_history, user_collection, onboarding_collection, file_collection, gift_collection
+from config.db_config import contest_participant_collection, countries_collection, private_gallery_purchases_collection, profile_view_history, user_collection, onboarding_collection, file_collection, gift_collection
 from core.utils.response_mixin import CustomResponseMixin
 from core.utils.age_calculation import calculate_age
 from api.controller.files_controller import get_profile_photo_url, generate_file_url, profile_photo_from_onboarding
@@ -16,7 +16,8 @@ from core.utils.pagination import StandardResultsSetPagination
 from core.utils.core_enums import MembershipType, NotificationType, NotificationRecipientType
 from services.notification_service import send_notification
 from services.premium_guard import require_premium
-from services.gallery_service import resolve_gallery_items
+from services.gallery_service import *
+from config.models.contest_model import resolve_badge
 
 response = CustomResponseMixin()
 
@@ -30,6 +31,16 @@ async def get_profile_controller(user_id: str, viewer: dict, lang: str = "en"):
     )
     if not user:
         return response.error_message(translate_message("USER_NOT_FOUND", lang=lang), data=[], status_code=404)
+
+    viewer_unlocked_images = set()
+    if viewer:
+        viewer_db = await user_collection.find_one(
+            {"_id": viewer["_id"]},
+            {"unlocked_images": 1}
+        )
+        viewer_unlocked_images = set(viewer_db.get("unlocked_images", []))
+
+    is_owner = viewer and str(viewer["_id"]) == user_id
 
     recipient_lang = user.get("lang", "en")
 
@@ -77,8 +88,12 @@ async def get_profile_controller(user_id: str, viewer: dict, lang: str = "en"):
     public_gallery_raw = onboarding.get("public_gallery", []) if onboarding else []
     private_gallery_raw = onboarding.get("private_gallery", []) if onboarding else []
 
-    public_gallery = await resolve_gallery_items(public_gallery_raw)
-    private_gallery = await resolve_gallery_items(private_gallery_raw)
+    public_gallery = await resolve_public_gallery_items(public_gallery_raw)
+    private_gallery = await resolve_private_gallery_items(
+        private_gallery_raw,
+        viewer_unlocked_images=viewer_unlocked_images,
+        is_owner=is_owner
+    )
 
     private_gallery_locked = membership_type == "free"
 
@@ -116,11 +131,31 @@ async def get_profile_controller(user_id: str, viewer: dict, lang: str = "en"):
                 "token": gift["token"]
             })
 
+    # Fetch latest contest winner badge (if any)
+    winner_badge = None
+
+    winner_entry = await contest_participant_collection.find_one(
+        {
+            "user_id": user_id,
+            "is_winner": True
+        },
+        sort=[("created_at", -1)]  # latest contest win
+    )
+    
+    if winner_entry:
+        position = (
+            winner_entry.get("winner_position")
+            or winner_entry.get("rank")
+        )
+
+        winner_badge = resolve_badge(position)
+
     profile_data = [{
         "name": user.get("username"),
         "age": age,
         "email": user.get("email"),
         "profile_photo": profile_photo_url,
+        "profile_badge": winner_badge,
         "about": onboarding.get("bio"),
         "hobbies": onboarding.get("passions"),
         "gender": onboarding.get("gender"),
@@ -288,9 +323,6 @@ async def buy_private_gallery_image(
         "owner_id": profile_user_id,
 
         "file_id": image_id,
-        "storage_key": image["storage_key"],
-        "storage_backend": image["storage_backend"],
-
         "price": price,
         "purchased_at": datetime.utcnow(),
         "is_active": True
@@ -581,23 +613,50 @@ async def search_profiles_controller(
                 if birthdate_query:
                     query[db_field] = birthdate_query
 
+    total_matching = await onboarding_collection.count_documents(query)
+
     # QUERY WITH PAGINATION
-    cursor = (
-        onboarding_collection
-        .find(query)
-        .skip(pagination.skip)
-        .limit(pagination.limit)
-    )
+    base_pipeline = [
+        {"$match": query},
+        {"$match": {"user_id": {"$ne": None}}},
+        {"$addFields": {"user_obj_id": {"$toObjectId": "$user_id"}}},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_obj_id",
+                "foreignField": "_id",
+                "as": "user"
+            }
+        },
+        {"$unwind": "$user"},
+        {"$match": {"user.is_deleted": {"$ne": True}}},
+    ]
+
+    count_pipeline = base_pipeline + [
+        {"$count": "total"}
+    ]
+
+    count_cursor = onboarding_collection.aggregate(count_pipeline)
+    count_result = await count_cursor.to_list(length=1)
+
+    total_matching = count_result[0]["total"] if count_result else 0
+
+    data_pipeline = base_pipeline + [
+        {"$sort": {"_id": 1}}
+    ]
+
+    if pagination.page is not None and pagination.page_size is not None:
+        data_pipeline.extend([
+            {"$skip": pagination.skip},
+            {"$limit": pagination.page_size}
+        ])
+
+    cursor = onboarding_collection.aggregate(data_pipeline)
 
     results = []
 
     async for onboarding in cursor:
-        user = await user_collection.find_one(
-            {"_id": ObjectId(onboarding["user_id"]), "is_deleted": {"$ne": True}}
-        )
-        if not user:
-            continue
-
+        user = onboarding["user"]
         birthdate = onboarding.get("birthdate")
 
         age = calculate_age(birthdate) if birthdate else None
@@ -622,6 +681,7 @@ async def search_profiles_controller(
             "results": results,
             "page": pagination.page,
             "page_size": pagination.page_size,
+            "total": total_matching,
             "premium_required": False
         }]
     )

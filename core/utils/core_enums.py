@@ -23,6 +23,7 @@ class TokenTransactionReason(str, Enum):
     SUBSCRIPTION = "Purchased_Subscription_Plan"
     ACCOUNT_VERIFIED = "Account_Verified"
     TOKEN_PURCHASE = "Token_Purchase"
+    TOKEN_WITHDRAWAL = "Token_Withdrawal"
 
 class LoginStatus(str, Enum):
     ACTIVE = "active"
@@ -58,11 +59,15 @@ class NotificationType(str, Enum):
     SUBSCRIPTION_EXPIRY = "subscription_expiry"
     REPORT = "report"
     BLOCK = "block"
+    TOKEN_WITHDRAW_STATUS = "token_withdrawn_status_updated"
 
 class VerificationStatusEnum(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+    SUSPENDED = "suspended"
+    DELETED = "deleted"
+    BLOCKED = "blocked"
 
 
 class ContestStatus(str, Enum):
@@ -86,3 +91,24 @@ class ContestVisibility(str, Enum):
 class ContestType(str, Enum):
     active = "active"
     past = "past"
+
+class TokenPlanStatus(str, Enum):
+    active = "active",
+    inactive = "inactive",
+
+class WithdrawalStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+    completed = "completed"
+
+class DashboardFilter(str , Enum):
+    Daily = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+
+class TransactionTab(str, Enum):
+    SUBSCRIPTION = "subscription"
+    TOKEN_PURCHASE = "token_purchase"
+    TOKEN_WITHDRAWAL = "token_withdrawal"

@@ -31,6 +31,12 @@ from config.models.onboarding_model import *
 from core.utils.auth_utils import *
 from enum import Enum
 from typing import List
+from decimal import Decimal, ROUND_HALF_UP
+from config.basic_config import settings
+from schemas.user_token_history_schema import CreateTokenHistory
+from config.models.user_token_history_model import create_user_token_history
+
+TOKEN_TO_USDT_RATE = Decimal("0.05")
 
 load_dotenv()
 
@@ -175,7 +181,8 @@ async def finalize_login_response(user: dict, lang: str):
         data=[{
             "access_token": access_token,
             "refresh_token": refresh_token,
-            "onboarding_completed": onboarding_completed
+            "onboarding_completed": onboarding_completed,
+            "two_factor_enabled": user.get("two_factor_enabled", False)
         }],
         status_code=200
     )
@@ -231,3 +238,76 @@ async def get_country_name_by_id(
         return country_doc.get("name") if country_doc else None
     except Exception:
         return None
+
+def calculate_usdt_amount(tokens: int) -> Decimal:
+    """
+    Calculate USDT amount based on token volume.
+
+    Rules:
+    - 1 Token = 0.05 USDT
+    - Result rounded to 2 decimal places
+
+    :param tokens: Number of token
+    :return: USDT amounts
+    """
+    if tokens <= 0:
+        raise ValueError("Tokens must be greater than 0")
+
+    usdt_amount = Decimal(tokens) * TOKEN_TO_USDT_RATE
+
+    return usdt_amount.quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
+
+
+async def credit_tokens_for_verification(user_id: str, admin_id: str):
+    """
+    Credits 100 tokens only once after verification approval
+    """
+
+    # Check if already rewarded
+    already_rewarded = await user_token_history_collection.find_one({
+        "user_id": user_id,
+        "reason": TokenTransactionReason.ACCOUNT_VERIFIED
+    })
+
+    if already_rewarded:
+        return  # Prevent double credit
+
+    # Fetch current balance
+    user = await user_collection.find_one(
+        {"_id": ObjectId(user_id)},
+        {"tokens": 1}
+    )
+
+    balance_before = int(user.get("tokens") or 0)
+    balance_after = balance_before + settings.VERIFICATION_REWARD_TOKENS
+
+    # Atomic token update
+    await user_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$inc": {"tokens": settings.VERIFICATION_REWARD_TOKENS},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+
+    # Insert history
+    token_history = CreateTokenHistory(
+        user_id=user_id,
+        delta=settings.VERIFICATION_REWARD_TOKENS,
+        type=TokenTransactionType.CREDIT,
+        reason=TokenTransactionReason.ACCOUNT_VERIFIED,
+        balance_before=str(balance_before),
+        balance_after=str(balance_after)
+    )
+
+    await create_user_token_history(token_history)
+
+def calculate_visibility(start_date, end_date):
+    now = datetime.utcnow()
+
+    if now < start_date:
+        return ContestVisibility.upcoming.value
+    elif start_date <= now <= end_date:
+        return ContestVisibility.in_progress.value
+    else:
+        return ContestVisibility.completed.value

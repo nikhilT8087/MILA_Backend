@@ -58,7 +58,7 @@ async def block_user_controller(
             data=[{
                 "blocked_user_id": blocked_id
             }],
-            status_code=200
+            status_code=400
         )
 
     await blocked_users_collection.insert_one({
@@ -115,8 +115,24 @@ async def report_user_controller(
             data=[]
         )
 
+    # ---------------- VALIDATE REASON ----------------
+    if not reason or not reason.strip():
+        return response.error_message(
+            translate_message("REPORT_REASON_REQUIRED", lang),
+            status_code=400,
+            data=[]
+        )
+
     reason = reason.strip()
-    if not re.search(r"[A-Za-z]{3,}", reason):
+
+    if len(reason) < 5:
+        return response.error_message(
+            translate_message("PLEASE_ENTER_AT_LEAST_5_CHARACTERS", lang),
+            status_code=400,
+            data=[]
+        )
+
+    if not re.search(r"[A-Za-z]", reason):
         return response.error_message(
             translate_message("PLEASE_ENTER_VALID_REPORT_REASON", lang),
             status_code=400,
@@ -131,7 +147,7 @@ async def report_user_controller(
     if existing_report:
         return response.error_message(
             translate_message("USER_ALREADY_REPORTED", lang),
-            status_code=200,
+            status_code=400,
             data=[{
                 "reported_user_id": reported_id,
                 "reason": reason

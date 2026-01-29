@@ -3,19 +3,36 @@
 from core.utils.age_calculation import calculate_age
 from core.utils.core_enums import MembershipType
 from core.utils.helper import *
+from api.controller.files_controller import *
 
 async def build_basic_profile_response(user: dict, onboarding: dict, profile_photo: str):
     birthdate = onboarding.get("birthdate") if onboarding else None
     age = calculate_age(birthdate) if birthdate else None
 
     country_name = await get_country_name_by_id(onboarding.get("country"), countries_collection)
+    preferred_countries = []
+
+    for cid in onboarding.get("preferred_country", []):
+        if not cid:
+            continue
+
+        country = await countries_collection.find_one(
+            {"_id": ObjectId(cid)},
+            {"name": 1, "code": 1}
+        )
+        if country:
+            preferred_countries.append({
+                "id": str(country["_id"]),
+                "name": country["name"],
+            })
 
     return {
         "header": {
             "name": user.get("username"),
             "age": age,
             "is_verified": user.get("is_verified", False),
-            "profile_photo": profile_photo
+            "profile_photo": profile_photo,
+            "language": user.get("language", "en"),
         },
 
         "personal_info": {
@@ -40,7 +57,7 @@ async def build_basic_profile_response(user: dict, onboarding: dict, profile_pho
         "preferences": {
             "hobbies": onboarding.get("passions", []) if onboarding else [],
             "sexual_preferences": onboarding.get("sexual_preferences", []) if onboarding else [],
-            "preferred_country": onboarding.get("preferred_country", []) if onboarding else []
+            "preferred_country": preferred_countries
         }
     }
 
@@ -59,20 +76,48 @@ def build_selectable_options(all_options: list, selected_values):
         for option in all_options
     ]
 
-def build_edit_profile_response(user: dict, onboarding: dict):
+async def build_edit_profile_response(user: dict, onboarding: dict):
     onboarding = onboarding or {}
     is_premium = user.get("membership_type") == MembershipType.PREMIUM
 
+    country_name = await get_country_name_by_id(
+        onboarding.get("country"),
+        countries_collection
+    )
+
+    preferred_countries = []
+
+    for cid in onboarding.get("preferred_country", []):
+        if not cid:
+            continue
+
+        country = await countries_collection.find_one(
+            {"_id": ObjectId(cid)},
+            {"name": 1, "code": 1}
+        )
+        if country:
+            preferred_countries.append({
+                "id": str(country["_id"]),
+                "name": country["name"],
+            })
+
+    birthdate = onboarding.get("birthdate") if onboarding else None
+    age = calculate_age(birthdate) if birthdate else None
+
     data = {
+        "username": user.get("username"),
+        "is_verified": user.get("is_verified", False),        
+        "profile_photo": await profile_photo_from_onboarding(onboarding),
+
         "basic_details": {
             "bio": onboarding.get("bio"),
-            "country": onboarding.get("country"),
-
+            "country": country_name,
+            "country_id": onboarding.get("country"),
             "gender": build_selectable_options(
                 enum_values(GenderEnum),
                 onboarding.get("gender")
             ),
-
+            "age": age,
             "sexual_orientation": build_selectable_options(
                 enum_values(SexualOrientationEnum),
                 onboarding.get("sexual_orientation")
@@ -95,7 +140,13 @@ def build_edit_profile_response(user: dict, onboarding: dict):
                 onboarding.get("interested_in", [])
             ),
 
-            "preferred_country": onboarding.get("preferred_country", [])
+            # SHOW FOR ALL USERS
+            "sexual_preferences": build_selectable_options(
+                enum_values(SexualPreferenceEnum),
+                onboarding.get("sexual_preferences", [])
+            ),
+
+            "preferred_country": preferred_countries
         },
 
         "security": {
@@ -107,11 +158,5 @@ def build_edit_profile_response(user: dict, onboarding: dict):
             "enabled": is_premium
         }
     }
-
-    if is_premium:
-        data["interests"]["sexual_preferences"] = build_selectable_options(
-            enum_values(SexualPreferenceEnum),
-            onboarding.get("sexual_preferences", [])
-        )
 
     return data

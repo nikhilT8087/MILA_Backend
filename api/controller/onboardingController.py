@@ -150,6 +150,35 @@ async def save_onboarding_step(
 
         payload["images"] = images
 
+        # -------- ADD IMAGES TO PUBLIC GALLERY --------
+        existing_doc = await onboarding_collection.find_one(
+            {"user_id": user_id},
+            {"public_gallery": 1}
+        )
+
+        existing_gallery = (
+            existing_doc.get("public_gallery", [])
+            if existing_doc else []
+        )
+
+        existing_file_ids = {
+            item.get("file_id") for item in existing_gallery
+        }
+
+        new_gallery_items = [
+            {
+                "file_id": fid,
+                "uploaded_at": datetime.utcnow()
+            }
+            for fid in images
+            if fid not in existing_file_ids
+        ]
+
+        payload["public_gallery"] = existing_gallery + new_gallery_items
+
+    # --------------------------------------------------
+    # COUNTRY VALIDATION
+    # --------------------------------------------------
     if payload.get("country"):
         cid = payload["country"]
 
@@ -642,6 +671,7 @@ async def fetch_user_by_id(user_id: str, lang: str):
                 "country": 1,
                 "birthdate": 1,
                 "tokens": 1,
+                "images": 1,
             }
         )
 
@@ -679,12 +709,31 @@ async def fetch_user_by_id(user_id: str, lang: str):
                 else user_data["birthdate"]
             )
             age = calculate_age(dob)
+        
+        country_data = None
+        country_id = user_data.get("country")
 
+        if country_id:
+            country_doc = await countries_collection.find_one(
+                {"_id": ObjectId(country_id)},
+                {"name": 1}
+            )
+
+            if country_doc:
+                country_data = {
+                    "id": str(country_doc["_id"]),
+                    "name": country_doc.get("name")
+                }
+        
         # Profile photo
         profile_photo = None
-        if user.get("profile_photo_id"):
+        images = user_data.get("images", [])
+
+        if images:
+            first_image_id = images[0]
+
             file_doc = await file_collection.find_one(
-                {"_id": ObjectId(user["profile_photo_id"])},
+                {"_id": ObjectId(first_image_id)},
                 {"storage_key": 1, "storage_backend": 1}
             )
 
@@ -705,7 +754,7 @@ async def fetch_user_by_id(user_id: str, lang: str):
             "status": user.get("login_status"),
             "bio": user_data.get("bio"),
             "age": age,
-            "country": user_data.get("country"),
+            "country": country_data, 
             "tokens": user_data.get("tokens"),
             "passions": user_data.get("passions"),
             "profile_photo": profile_photo
@@ -828,6 +877,129 @@ async def upload_onboarding_selfie(
     except Exception as e:
         return response.raise_exception(
             translate_message("ERROR_WHILE_UPLOADING_SELFIE", lang),
+            data=str(e),
+            status_code=500
+        )
+
+async def update_profile_image_onboarding(
+    image: UploadFile,
+    current_user: dict
+):
+    lang = current_user.get("language", "en")
+
+    try:
+        user_id = str(current_user["_id"])
+
+        # ================= INLINE FILE TYPE VALIDATION =================
+
+        ALLOWED_MIME_TYPES = {
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/webp"
+        }
+
+        ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+
+        # 1. Validate MIME type
+        if image.content_type not in ALLOWED_MIME_TYPES:
+            return response.error_message(
+                translate_message("UNSUPPORTED_PROFILE_IMAGE_TYPE", lang),
+                data=[],
+                status_code=400
+            )
+
+        # 2. Validate file extension
+        filename = image.filename.lower()
+
+        if "." not in filename:
+            return response.error_message(
+                translate_message("UNSUPPORTED_PROFILE_IMAGE_TYPE", lang),
+                data={
+                    "allowed_types": "JPG, JPEG, PNG, WEBP"
+                },
+                status_code=400
+            )
+
+        ext = filename.rsplit(".", 1)[1]
+
+        if ext not in ALLOWED_EXTENSIONS:
+            return response.error_message(
+                translate_message("UNSUPPORTED_PROFILE_IMAGE_TYPE", lang),
+                data={
+                    "allowed_types": "JPG, JPEG, PNG, WEBP"
+                },
+                status_code=400
+            )
+
+        # ================= SAVE FILE =================
+
+        public_url, storage_key, backend = await save_file(
+            file_obj=image,
+            file_name=image.filename,
+            user_id=user_id,
+            file_type="profile_photo",
+        )
+
+        file_doc = Files(
+            storage_key=storage_key,
+            storage_backend=backend,
+            file_type="profile_photo",
+            uploaded_by=user_id,
+            uploaded_at=datetime.utcnow(),
+        )
+
+        inserted = await file_collection.insert_one(
+            file_doc.model_dump(by_alias=True)
+        )
+
+        new_file_id = str(inserted.inserted_id)
+
+        # ---------------- FETCH ONBOARDING ----------------
+        onboarding = await onboarding_collection.find_one(
+            {"user_id": user_id},
+            {"images": 1}
+        )
+
+        if not onboarding:
+            return response.error_message(
+                translate_message("ONBOARDING_NOT_FOUND", lang),
+                status_code=404
+            )
+
+        images = onboarding.get("images", [])
+
+        # ---------------- UPDATE 0th INDEX ----------------
+        if images:
+            images[0] = new_file_id
+        else:
+            images = [new_file_id]
+
+        # ---------------- UPDATE ONBOARDING ----------------
+        await onboarding_collection.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "images": images,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        # ---------------- RESPONSE ----------------
+        return response.success_message(
+            translate_message("PROFILE_IMAGE_UPDATED", lang),
+            data={
+                "file_id": new_file_id,
+                "storage_key": storage_key,
+                "url": public_url
+            },
+            status_code=200
+        )
+
+    except Exception as e:
+        return response.raise_exception(
+            translate_message("ERROR_WHILE_UPLOADING_FILE", lang),
             data=str(e),
             status_code=500
         )

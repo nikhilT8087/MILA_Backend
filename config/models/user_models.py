@@ -8,12 +8,12 @@ from pydantic_core import core_schema
 from bson import ObjectId
 from datetime import datetime,date
 from config.db_config import db
-from config.db_config import user_collection,token_collection
+from config.db_config import user_collection,token_collection, file_collection, onboarding_collection
 from core.utils.response_mixin import CustomResponseMixin
 from enum import Enum
 import asyncio
 import re
-
+from config.models.user_token_history_model import *
 
 response = CustomResponseMixin()
 
@@ -50,7 +50,7 @@ class PyObjectId(str):
         return json_schema
 
 FREE_FILTERS = {
-    "cities": ("country", "$in"),
+    "country": ("country", "$in"),
     "genders": ("gender", "$in"),
 }
 
@@ -76,6 +76,9 @@ class FileType(str, Enum):
     PUBLIC_GALLERY = "public_gallery"
     PRIVATE_GALLERY = "private_gallery"
     GIFT = "gift"
+    VERIFICATION_SELFIE = "verification_selfie"
+    CONTEST = "contest"
+    CONTEST_BANNER = "contest_banner"
 
 # ---- Files model ----
 class Files(BaseModel):
@@ -241,6 +244,52 @@ async def get_users_list(
     total = await user_collection.count_documents(condition)
 
     return users, total
+
+async def get_user_token_balance(user_id: str) -> int:
+    user = await user_collection.find_one(
+        {"_id": ObjectId(user_id)},
+        {"tokens": 1}
+    )
+    return int(user.get("tokens", 0)) if user else 0
+
+async def debit_user_tokens(
+    user_id: str,
+    amount: int,
+    reason: str
+):
+    balance_before = await get_user_token_balance(user_id)
+
+    if balance_before < amount:
+        return None, balance_before
+
+    balance_after = balance_before - amount
+
+    # Atomic update
+    await user_collection.update_one(
+        {
+            "_id": ObjectId(user_id),
+            "tokens": {"$gte": amount}
+        },
+        {
+            "$inc": {"tokens": -amount},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+
+    # Token history entry
+    await create_user_token_history(
+        CreateTokenHistory(
+            user_id=user_id,
+            delta=-amount,
+            type=TokenTransactionType.DEBIT,
+            reason=reason,
+            balance_before=str(balance_before),
+            balance_after=str(balance_after)
+        )
+    )
+
+    return balance_after, balance_before
+
 
 async def update_user_token_balance(
     user_id: str,

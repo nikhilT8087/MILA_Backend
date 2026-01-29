@@ -2,7 +2,8 @@ from typing import Optional
 
 from bson import ObjectId
 
-from core.utils.core_enums import TransactionType, TransactionStatus, TokenTransactionType
+from core.utils.core_enums import TransactionType, TransactionStatus, TokenTransactionType, TokenPlanStatus, \
+    WithdrawalStatus
 from core.utils.exceptions import CustomValidationError
 from core.utils.pagination import StandardResultsSetPagination
 from config.models.user_token_history_model import get_user_token_history
@@ -39,7 +40,13 @@ async def get_user_token_details(
             transaction_type=transaction_type
         )
         available_tokens = await get_user_details(condition={"_id":ObjectId(user_id)}, fields=["tokens"])
-        token_plans = await get_token_packages_plans()
+        token_plans = await get_token_packages_plans(condition={"status":TokenPlanStatus.active.value,
+                                                                "$or": [
+                                                                    {"deleted": {"$exists": False}},
+                                                                    {"deleted": None},
+                                                                    {"deleted": False}
+                                                                ]
+                                                                })
         token_plans = convert_objectid_to_str(token_plans)
         data = TokenHistoryResponse(
             history=token_history,
@@ -215,7 +222,7 @@ async def request_withdrawn_token_amount(request: WithdrawnTokenRequestModel, us
             user_id=str(ObjectId(user_id)),
             request_amount=request.amount,
             remaining_amount=request.amount,
-            status=TransactionStatus.PENDING.value,
+            status=WithdrawalStatus.pending.value,
             tokens=withdrawn_token,
             wallet_address=request.wallet_address,
         )

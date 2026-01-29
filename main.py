@@ -9,7 +9,14 @@ from api.routes import (
     profile_api, token_history_route, profile_api_route ,
     userPass_route, like_route_api, block_report_route, user_profile_view_api_route,
     fcm_route,
-    verification_routes, contest_api_route, user_management
+    verification_routes, contest_api_route, user_management , moderation_route
+)
+
+from api.routes.admin import (
+    token_plan_routes, withdrawal_request_routes,
+    event_management_route,
+    dashboard_route,
+    transctions_route
 )
 
 from core.utils.exceptions import CustomValidationError, custom_validation_error_handler, validation_exception_handler
@@ -31,6 +38,7 @@ from config.db_seeder.AdminSeeder import seed_admin
 from config.db_seeder.SubscriptionPlanSeeder import seed_subscription_plan
 
 from core.firebase import init_firebase
+from config.basic_config import *
 
 init_firebase()
 
@@ -38,14 +46,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 app = FastAPI()
 
 # Make sure your uploads folder exists
-UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PUBLIC_DIR = os.path.join(BASE_DIR, settings.PUBLIC_DIR)
+UPLOAD_DIR = os.path.join(BASE_DIR, settings.UPLOAD_DIR)
 
 PUBLIC_GALLERY_DIR = os.path.join(UPLOAD_DIR, "public_gallery")
 PRIVATE_GALLERY_DIR = os.path.join(UPLOAD_DIR, "private_gallery")
 PROFILE_PHOTO_DIR = os.path.join(UPLOAD_DIR, "profile_photo")
 SELFIE_DIR = os.path.join(UPLOAD_DIR, "selfie")
-GIFTS_DIR = os.path.join(UPLOAD_DIR, "gift")
+GIFTS_DIR = os.path.join(PUBLIC_DIR, "gift")
 BANNER_DIR = os.path.join(UPLOAD_DIR, "contest_banner")
+VERIFICATION_SELFIE_DIR = os.path.join(UPLOAD_DIR, "verification_selfie")
+CONTEST_PARTICIPATE_DIR = os.path.join(UPLOAD_DIR, "contest")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(PUBLIC_GALLERY_DIR, exist_ok=True)
@@ -54,6 +67,8 @@ os.makedirs(PROFILE_PHOTO_DIR, exist_ok=True)
 os.makedirs(GIFTS_DIR, exist_ok=True)
 os.makedirs(SELFIE_DIR, exist_ok=True)
 os.makedirs(BANNER_DIR, exist_ok=True)
+os.makedirs(VERIFICATION_SELFIE_DIR, exist_ok=True)
+os.makedirs(CONTEST_PARTICIPATE_DIR, exist_ok=True)
 
 app.mount("/public_gallery", StaticFiles(directory=PUBLIC_GALLERY_DIR))
 app.mount("/private_gallery", StaticFiles(directory=PRIVATE_GALLERY_DIR))
@@ -61,6 +76,8 @@ app.mount("/profile_photo", StaticFiles(directory=PROFILE_PHOTO_DIR))
 app.mount("/gifts", StaticFiles(directory=GIFTS_DIR))
 app.mount("/selfie", StaticFiles(directory=SELFIE_DIR), name="selfie")
 app.mount("/contest_banner", StaticFiles(directory=BANNER_DIR))
+app.mount("/verification_selfie",StaticFiles(directory=VERIFICATION_SELFIE_DIR))
+app.mount("/contest",StaticFiles(directory=CONTEST_PARTICIPATE_DIR))
 
 # Health check endpoints
 @app.get("/health")
@@ -218,8 +235,8 @@ app.include_router(user_profile_api.router, prefix="/api/auth", tags=["Users"])
 app.include_router(subscription_plan_route.api_router, prefix="/api/subscription", tags=["Subscription Plans"])
 app.include_router(adminauth_route.router)
 app.include_router(onboarding_route.router)
-app.include_router(google_auth_api.router, prefix="/api/google-auth")
-app.include_router(apple_auth_api.router, prefix="/api/apple-auth")
+app.include_router(google_auth_api.router, prefix="/api/google-auth", tags=["Auth"])
+app.include_router(apple_auth_api.router, prefix="/api/apple-auth", tags=["Auth"])
 app.include_router(profile_api.router, prefix="/api/user")
 app.include_router(token_history_route.api_router, prefix="/api/tokens", tags=["Tokens"])
 app.include_router(profile_api_route.router, prefix="/api/profile")
@@ -231,6 +248,13 @@ app.include_router(block_report_route.router)
 app.include_router(fcm_route.router, prefix="/api/fcm")
 app.include_router(contest_api_route.router, prefix="/api/contests")
 app.include_router(user_management.router)
+app.include_router(moderation_route.router , prefix="/moderation")
+
+app.include_router(token_plan_routes.admin_router)
+app.include_router(event_management_route.admin_router)
+app.include_router(withdrawal_request_routes.admin_router)
+app.include_router(dashboard_route.adminrouter)
+app.include_router(transctions_route.admin_router)
 
 # Scheduler Instance
 scheduler = BackgroundScheduler()
@@ -366,9 +390,7 @@ def main():
     logger.info("Scheduler started")
     
     try:
-        # Run initial update
-        update_ev_data()
-        
+
         # Keep the main thread alive
         while True:
             pass

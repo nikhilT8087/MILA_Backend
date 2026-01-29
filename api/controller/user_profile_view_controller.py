@@ -15,6 +15,7 @@ from fastapi import UploadFile
 from bson import ObjectId
 from services.profile_fetch_service import *
 from config.models.onboarding_model import *
+from core.utils.helper import *
 
 response = CustomResponseMixin()
 
@@ -29,7 +30,9 @@ async def get_edit_profile_controller(current_user: dict, lang: str = "en"):
             status_code=404
         )
 
-    data = build_edit_profile_response(user, onboarding)
+    data = await build_edit_profile_response(user, onboarding)
+
+    data = serialize_datetime_fields(convert_objectid_to_str(data))
 
     return response.success_message(
         translate_message("EDIT_PROFILE_DATA_FETCHED_SUCCESSFULLY", lang),
@@ -59,6 +62,8 @@ async def update_edit_profile_controller(
             status_code=404
         )
 
+    is_premium = user.get("membership_type") == MembershipType.PREMIUM
+
     # USER UPDATE
     user_update = {}
 
@@ -78,16 +83,40 @@ async def update_edit_profile_controller(
     # ONBOARDING UPDATE
     onboarding_update = {}
 
-    for field in BASIC_FIELDS + INTEREST_FIELDS:
-        value = getattr(payload, field, None)
-        if value is not None:
-            onboarding_update[field] = value
+    # BASIC DETAILS
+    if payload.bio is not None:
+        onboarding_update["bio"] = payload.bio
 
-    # Premium-only field
+    if payload.country is not None:
+        onboarding_update["country"] = payload.country
+
+    if payload.gender is not None:
+        onboarding_update["gender"] = payload.gender
+
+    if payload.sexual_orientation is not None:
+        onboarding_update["sexual_orientation"] = payload.sexual_orientation
+
+    if payload.marital_status is not None:
+        onboarding_update["marital_status"] = payload.marital_status
+
+    # INTERESTS
+    if payload.passions is not None:
+        onboarding_update["passions"] = payload.passions
+
+    if payload.interested_in is not None:
+        onboarding_update["interested_in"] = payload.interested_in
+
+    if payload.preferred_country is not None:
+        onboarding_update["preferred_country"] = payload.preferred_country
+
+    # PREMIUM-ONLY
     if payload.sexual_preferences is not None:
-        premium_error = require_premium(current_user, lang)
-        if premium_error:
-            return premium_error
+        if not is_premium:
+            return response.error_message(
+                translate_message("PREMIUM_REQUIRED", lang),
+                status_code=403,
+                data={"premium_required": True}
+            )
         onboarding_update["sexual_preferences"] = payload.sexual_preferences
 
     if onboarding_update:
@@ -130,12 +159,44 @@ async def retry_verification_selfie_controller(
             status_code=400
         )
 
+    verification = await verification_collection.find_one(
+        {"user_id": user_id},
+        {"status": 1}
+    )
+
+    # If verification exists, validate status
+    if verification:
+        status = verification.get("status")
+
+        # Allow ONLY when rejected
+        if status == VerificationStatusEnum.PENDING:
+            return response.error_message(
+                translate_message("VERIFICATION_ALREADY_PENDING", lang),
+                status_code=400
+            )
+
+        if status == VerificationStatusEnum.APPROVED:
+            return response.error_message(
+                translate_message("ALREADY_VERIFIED", lang),
+                status_code=400
+            )
+
+        if status in [
+            VerificationStatusEnum.SUSPENDED,
+            VerificationStatusEnum.BLOCKED,
+            VerificationStatusEnum.DELETED
+        ]:
+            return response.error_message(
+                translate_message("VERIFICATION_NOT_ALLOWED", lang),
+                status_code=403
+            )
+
     # SAVE SELFIE FILE
     _, storage_key, backend = await save_file(
         file_obj=selfie,
         file_name=selfie.filename,
         user_id=user_id,
-        file_type="profile_photos"
+        file_type="verification_selfie"
     )
 
     file_doc = Files(
@@ -173,12 +234,29 @@ async def retry_verification_selfie_controller(
         upsert=True
     )
 
+    await verification_collection.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "status": "pending",
+                "verified_by_admin_id": None,
+                "verified_at": None,
+                "updated_at": datetime.utcnow()
+            },
+            "$setOnInsert": {
+                "user_id": user_id,
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+    
     # UPDATE USER STATUS
     await user_collection.update_one(
         {"_id": current_user["_id"]},
         {
             "$set": {
-                "is_verified": "false",
+                "is_verified": False,
                 "updated_at": datetime.utcnow()
             }
         }
