@@ -11,7 +11,8 @@ from config.db_config import (
     file_collection,
     user_collection,
     countries_collection,
-    interest_categories_collection
+    interest_categories_collection,
+    user_collection
 )
 from core.utils.response_mixin import CustomResponseMixin
 from core.utils.core_enums import MembershipType
@@ -517,6 +518,16 @@ async def get_onboarding_steps_by_user_id(user_id: str, lang: str = "en"):
             status_code=404
         )
 
+    # FETCH USER (FREE / PREMIUM)
+    user_doc = await user_collection.find_one(
+        {"_id": ObjectId(user_id)},
+        {"membership_type": 1}
+    )
+
+    membership_type = MembershipType.FREE
+    if user_doc and user_doc.get("membership_type"):
+        membership_type = user_doc["membership_type"]
+
     formatted = await format_onboarding_response(onboarding)
 
     country_out = None
@@ -574,6 +585,7 @@ async def get_onboarding_steps_by_user_id(user_id: str, lang: str = "en"):
         translate_message("ONBOARDING_STEPS_FETCHED", lang),
         data=[{
             "user_id": user_id,
+            "membership_type": membership_type,
             "onboarding_completed": formatted.get("onboarding_completed", False),
             "steps": steps
         }]
