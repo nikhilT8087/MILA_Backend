@@ -413,6 +413,7 @@ async def handle_token_full_payment(
     transaction_data: TransactionCreateModel,
     plan_data: Dict[str, Any],
     user_id: str,
+    insert_token: bool = False,
 ) -> Dict[str, Any]:
     """
         Handles token credit processing for fully paid transactions.
@@ -424,6 +425,7 @@ async def handle_token_full_payment(
                                  transaction information for the token purchase.
         :param plan_data: Dictionary containing token plan details.
         :param user_id: Unique identifier of the user receiving the tokens.
+        :param insert_token: Boolean indicating whether token purchase should be
         :return: Dictionary containing the persisted transaction record.
     """
     transaction_data= await _prepare_transaction_for_token_purchase(
@@ -435,12 +437,13 @@ async def handle_token_full_payment(
     doc = await store_transaction_details(transaction_data)
 
     # 4. Token history and user token updates
-    await _add_user_token_history_and_tokens(
-        user_id=user_id,
-        user_details=user_details,
-        on_token_package=int(transaction_data.tokens),
-        transaction_id=doc["_id"],
-    )
+    if insert_token:
+        await _add_user_token_history_and_tokens(
+            user_id=user_id,
+            user_details=user_details,
+            on_token_package=int(transaction_data.tokens),
+            transaction_id=doc["_id"],
+        )
     return doc
 
 async def _add_user_token_history_and_tokens(
@@ -513,13 +516,12 @@ async def mark_token_full_payment_received(
 
 
     # 4. Token history and user token updates
-    await _add_user_token_history_and_tokens(
-        user_id=user_id,
-        user_details=user_details,
-        on_token_package=int(transaction_data.tokens),
-        transaction_id=doc["_id"],
+    current_tokens = int(user_details.get("tokens") or 0)
+    new_balance = current_tokens + int(transaction_data.tokens)
+    await user_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"tokens": str(new_balance)}},
     )
-
     return doc
 
 async def validate_withdrawal_tokens(user_tokens: int, lang:str):

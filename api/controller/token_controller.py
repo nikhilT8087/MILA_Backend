@@ -7,11 +7,11 @@ from core.utils.core_enums import TransactionType, TransactionStatus, TokenTrans
     WithdrawalStatus, TokenTransactionReason
 from core.utils.exceptions import CustomValidationError
 from core.utils.pagination import StandardResultsSetPagination
-from config.models.user_token_history_model import get_user_token_history
+from config.models.user_token_history_model import get_user_token_history, create_user_token_history
 from config.models.token_packages_plan_model import get_token_packages_plans, get_token_packages_plan
 from schemas.transcation_schema import TokenWithdrawTransactionCreateModel
 from schemas.user_token_history_schema import TokenHistoryResponse, TokenTransactionRequestModel, \
-    CompleteTokenTransactionRequestModel, WithdrawnTokenRequestModel
+    CompleteTokenTransactionRequestModel, WithdrawnTokenRequestModel, CreateTokenHistory
 from services.translation import translate_message
 from core.utils.helper import serialize_datetime_fields, convert_objectid_to_str
 from core.utils.transaction_helper import get_transaction_details, validate_destination_wallet, \
@@ -104,11 +104,26 @@ async def verify_token_purchase(request: TokenTransactionRequestModel,user_id:st
         if transaction_data.status == TransactionStatus.PARTIAL.value:
             transaction_data.payment_details = [transaction_data.payment_details]
             doc = await store_transaction_details(transaction_data)
+            user_details = await user_collection.find_one({"_id": ObjectId(user_id)})
+            current_tokens = int(user_details.get("tokens") or 0)
+            on_token_package = int(plan_data['tokens'])
+            new_balance = current_tokens + on_token_package
+            token_history_data = CreateTokenHistory(
+                user_id=str(ObjectId(user_id)),
+                delta=on_token_package,
+                type=TokenTransactionType.CREDIT.value,
+                reason=TokenTransactionReason.TOKEN_PURCHASE.value,
+                balance_before=str(current_tokens),
+                balance_after=str(new_balance),
+                txn_id=str(doc['_id']),
+            )
+            await create_user_token_history(data=token_history_data)
         else:
             doc = await handle_token_full_payment(
                 transaction_data=transaction_data,
                 plan_data=plan_data,
                 user_id=user_id,
+                insert_token=True
             )
 
         doc = serialize_datetime_fields(doc)
