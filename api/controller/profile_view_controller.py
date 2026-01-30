@@ -19,6 +19,7 @@ from services.premium_guard import require_premium
 from services.gallery_service import *
 from config.models.contest_model import resolve_badge
 from schemas.gift_transaction_schema import *
+from config.models.userPass_model import *
 
 response = CustomResponseMixin()
 
@@ -633,6 +634,10 @@ async def search_profiles_controller(
                 if birthdate_query:
                     query[db_field] = birthdate_query
 
+    liked_me_user_ids = await get_liked_user_ids(
+        user_id=str(current_user["_id"])
+    )
+
     # --- Get excluded profile IDs (SERVICE LAYER) ---
     excluded_object_ids = await get_excluded_profile_user_ids(
         viewer_id=str(current_user["_id"])
@@ -659,15 +664,18 @@ async def search_profiles_controller(
         )
         profile_photo = await profile_photo_from_onboarding(onboarding)
 
-        results.append({
-            "user_id": str(user["_id"]),
-            "name": user.get("username"),
-            "age": age,
-            "country": country_name,
-            "profile_photo": profile_photo,
-            "is_verified": user.get("is_verified", False),
-            "login_status": user.get("login_status")
-        })
+    profile_user_id = str(user["_id"])
+
+    results.append({
+        "user_id": profile_user_id,
+        "name": user.get("username"),
+        "age": age,
+        "country": country_name,
+        "profile_photo": profile_photo,
+        "is_verified": user.get("is_verified", False),
+        "login_status": user.get("login_status"),
+        "liked_me": profile_user_id in liked_me_user_ids
+    })
 
     return response.success_message(
         translate_message("SEARCH_RESULTS_FETCHED", lang),
