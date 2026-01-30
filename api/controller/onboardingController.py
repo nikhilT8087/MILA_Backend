@@ -29,6 +29,8 @@ from config.models.user_models import Files
 from core.utils.helper import serialize_datetime_fields
 from services.translation import translate_message
 from core.utils.age_calculation import calculate_age
+from core.templates.email_templates import onboarding_completed_template
+from core.utils.auth_utils import send_email
 
 response = CustomResponseMixin()
 
@@ -280,6 +282,23 @@ async def save_onboarding_step(
             {"$set": {"onboarding_completed": True}}
         )
         doc["onboarding_completed"] = True
+
+        # ------------------ SEND EMAIL ------------------
+        user = await user_collection.find_one(
+            {"_id": ObjectId(user_id)},
+            {"email": 1, "username": 1}
+        )
+
+        if user and user.get("email"):
+            subject, body = onboarding_completed_template(
+                username=user.get("username", "User")
+            )
+            await send_email(
+                to_email=user["email"],
+                subject=subject,
+                body=body,
+                is_html=True
+            )
 
     formatted = await format_onboarding_response(doc)
 
